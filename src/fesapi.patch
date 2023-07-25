@@ -1,0 +1,11 @@
+--- src/common/DataObjectRepository.h	2023-07-24 17:46:49.000000000 +0200
++++ src/common/DataObjectRepository.h.patch	2023-07-24 21:35:30.775018191 +0200
+@@ -758,7 +758,7 @@
+ 		 * @returns	A pointer to the new EPC external part reference.
+ 		 */
+ 		template <class NumericalValueBase>
+-		NumericalValueBase* createEpcExternalPartReference(const std::string & guid, const std::string & title)
++		NumericalValueBase* createEpcExternalPartReference(const std::string & guid, const std::string & )
+ 		{
+ 			NumericalValueBase* result = new NumericalValueBase(getGsoapContext(), guid);
+ 			addDataObject(result);
