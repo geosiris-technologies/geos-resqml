@@ -1,36 +1,32 @@
-/*
- * ------------------------------------------------------------------------------------------------------------
- * SPDX-License-Identifier: LGPL-2.1-only
- *
- * Copyright (c) 2018-2020 Lawrence Livermore National Security LLC
- * Copyright (c) 2018-2020 The Board of Trustees of the Leland Stanford Junior University
- * Copyright (c) 2018-2020 Total, S.A
- * Copyright (c) 2019-     GEOS Contributors
- * All rights reserved
- *
- * See top level LICENSE, COPYRIGHT, CONTRIBUTORS, NOTICE, and ACKNOWLEDGEMENTS files for details.
- * ------------------------------------------------------------------------------------------------------------
- */
-
 /**
  * @file RESQMLMeshGenerator.hpp
  */
 
-#ifndef GEOS_EXTERNALCOMPONENTS_RESQML_RESQMLMESHGENERATOR_HPP
-#define GEOS_EXTERNALCOMPONENTS_RESQML_RESQMLMESHGENERATOR_HPP
+#ifndef GEOSX_MESH_GENERATORS_RESQMLMESHGENERATOR_HPP
+#define GEOSX_MESH_GENERATORS_RESQMLMESHGENERATOR_HPP
 
-// #include "codingUtilities/StringUtilities.hpp"
-// #include "codingUtilities/Utilities.hpp"
-// #include "mesh/ElementType.hpp"
+#include "codingUtilities/StringUtilities.hpp"
+#include "codingUtilities/Utilities.hpp"
+#include "mesh/ElementType.hpp"
 #include "mesh/generators/ExternalMeshGeneratorBase.hpp"
 #include "mesh/generators/VTKUtilities.hpp"
-// #include "mesh/FieldIdentifiers.hpp"
-#include <vtkDataSet.h>
+#include "mesh/FieldIdentifiers.hpp"
 
 #include "fesapi/common/EpcDocument.h"
 
-namespace geos
+// TODO can we remove this and use unique_ptr to hold mesh?
+#include <vtkSmartPointer.h>
+
+#include <map>
+#include <unordered_map>
+
+class vtkDataSet;
+
+namespace geosx
 {
+
+class CellBlockManager;
+class ElementRegionManager;
 
 /**
  *  @class RESQMLMeshGenerator
@@ -55,24 +51,29 @@ public:
   static string catalogName() { return "RESQMLMesh"; }
 
   /**
-   * @brief Generate the mesh using fesapi library
-   * 
-   * @param[inout] cellBlockManager the CellBlockManager that will receive the meshing information
-   * @param[in] partition the number of domain in each direction (x,y,z) for InternalMesh only, not used here
-   * @details blabla
+   * @brief Deserializes the RESQML epc file into a Data Repository.
+   * This repository is then used to populate the vtk data structures.
    */
-  void fillCellBlockManager( CellBlockManager & cellBlockManager, array1d< int > const & partition ) override;
+  virtual void postProcessInput() override;
 
-  void importFieldOnArray( Block block,
-                           string const & blockName,
-                           string const & meshFieldName,
-                           bool isMaterialField,
-                           dataRepository::WrapperBase & wrapper ) const override;
-                           
+  /**
+   * @brief Generate the mesh using fesapi library for reading RESQML data
+   * @param[in] domain in the DomainPartition to be written
+   * @details This method leverages the fesapi library to load meshes into
+   * vtk data structures.
+   */
+  virtual void generateMesh( DomainPartition & domain ) override;
+
+  /**
+   * @brief Imports field data from RESQML data
+   * @param[in] domain in the DomainPartition to be written
+   */
+  virtual void importFields( DomainPartition & domain ) const override;
+
   /**
    * @brief Free the memory of the temporary objects used to load the file.
    */
-  void freeResources() override;
+  virtual void freeResources() override;
 
   /**
    * @brief Get the Parent Representation object
@@ -80,15 +81,57 @@ public:
    */
   std::tuple< string, string > getParentRepresentation() const;
 
-protected:
-
   /**
-   * @brief Deserializes the RESQML epc file into a Data Repository.
-   * This repository is then used to populate the vtk data structures.
+   * @brief Type of map used to store cell lists.
+   *
+   * This should be an unordered_map, but some outdated standard libraries on some systems
+   * do not provide std::hash specialization for enums. This is not performance critical though.
    */
-  void postProcessInput() override;
+  using CellMapType = std::map< ElementType, std::unordered_map< int, std::vector< vtkIdType > > >;
 
 private:
+
+  /**
+   * @brief Load DataObject into a vtkDataSet
+   * @return the loaded object into a dataset
+   */
+  vtkSmartPointer< vtkDataSet > loadDataObject();
+
+  /**
+   * @brief Load a list of regions from fesapi into CellData of
+   * a vtkDataSet
+   * @param[in] mesh The dataset in which load the regions
+   * @return the dataset with the regions
+   */
+  vtkSmartPointer< vtkDataSet > loadRegions( vtkDataSet & mesh );
+
+  /**
+   * @brief Load a list of fields from fesapi into CellData of
+   * a vtkDataSet
+   * @param[in] mesh The dataset in which load the fields
+   * @return the dataset with the fields
+   */
+  vtkSmartPointer< vtkDataSet > loadFields( vtkSmartPointer< vtkDataSet > mesh );
+
+  /**
+   * @brief Load a list of surfaces from fesapi into a vtkDataSet
+   * 
+   * @param[in] mesh The dataset in whicj load the fields 
+   * @return the dataset with the fields
+   */
+  vtkSmartPointer< vtkDataSet > loadSurfaces( vtkDataSet & mesh );
+
+  /**
+   * @brief Looking for the UnstructuredGrid with fesapi
+   * @return a pointer to the unstructured grid
+   */
+  resqml2::UnstructuredGridRepresentation * retrieveUnstructuredGrid();
+
+  /**
+   * @brief Load the RESQML data into the VTK data structure
+   * @return a vtk mesh
+   */
+  vtkSmartPointer< vtkDataSet > loadMesh();
 
   ///@cond DO_NOT_DOCUMENT
   struct viewKeyStruct
@@ -97,8 +140,7 @@ private:
     constexpr static char const * titleInFileString() { return "titleInFile"; }
     constexpr static char const * uuidsRegionsToImportString() { return "UUIDsRegionsToImport"; }
     constexpr static char const * regionAttributeString() { return "regionAttribute"; }
-    constexpr static char const * uuidsFieldsToImportString() { return "UUIDsFieldsToImport"; }
-    constexpr static char const * fieldsToImportString() { return "fieldsToImport"; }    
+    constexpr static char const * uuidsFieldsToImportString() { return "UUIDsfieldsToImport"; }
     constexpr static char const * uuidsSurfacesToImportString() { return "UUIDsSurfacesToImport"; }
     constexpr static char const * nodesetNamesString() { return "nodesetNames"; }
     constexpr static char const * partitionRefinementString() { return "partitionRefinement"; }
@@ -106,63 +148,6 @@ private:
     constexpr static char const * useGlobalIdsString() { return "useGlobalIds"; }
   };
   /// @endcond
-
-
-  /**
-   * @brief Generate the mesh using fesapi library for reading RESQML data
-   * @param[in] domain in the DomainPartition to be written
-   * @details This method leverages the fesapi library to load meshes into
-   * vtk data structures.
-   */
-  void generateMesh( DomainPartition & domain );
-
-  /**
-   * @brief 
-   * 
-   * @param cellBlockName 
-   * @param meshFieldName 
-   * @param isMaterialField 
-   * @param wrapper 
-   */
-  void importVolumicFieldOnArray( string const & cellBlockName, string const & meshFieldName, bool isMaterialField, WrapperBase & wrapper ) const;
-
-
-  /**
-   * @brief Load a list of surfaces from fesapi into CellData of
-   * a vtkDataSet
-   * @param[in] mesh The dataset in which load the surfaces
-   * @return the dataset with the surfaces
-   */
-  vtkSmartPointer< vtkDataSet > loadSurfaces( vtkSmartPointer< vtkDataSet > mesh );
-
-  /**
-   * @brief Load a list of regions from fesapi into CellData of
-   * a vtkDataSet
-   * @param[in] mesh The dataset in which load the regions
-   * @return the dataset with the regions
-   */
-  vtkSmartPointer< vtkDataSet > loadRegions( vtkSmartPointer< vtkDataSet > mesh );
-
-  /**
-   * @brief Load a list of fields from fesapi into CellData of
-   * a vtkDataSet
-   * @param[in] mesh The dataset in which load the fields
-   * @return the dataset with the fields
-   */
-  vtkSmartPointer< vtkDataSet > loadProperties( vtkSmartPointer< vtkDataSet > mesh );
-
-  /**
-   * @brief Looking for the UnstructuredGrid with fesapi and
-   * Load DataObject into a vtkDataSet
-   * @return the loaded object into a dataset
-   */
-  vtkSmartPointer< vtkDataSet > retrieveUnstructuredGrid();
-
-  /**
-   * @brief Load the RESQML data into the VTK data structure
-   * @return a vtk mesh
-   */
-  vtkSmartPointer< vtkDataSet > loadMesh();
 
 
   ///Repository of RESQML objects
@@ -173,7 +158,7 @@ private:
   string m_parent_title;
 
   /**
-   * @brief The VTK mesh to be imported into GEOS.
+   * @brief The VTK mesh to be imported into GEOSX.
    * @note We keep this smart pointer as a member for use in @p importFields().
    */
   vtkSmartPointer< vtkDataSet > m_vtkMesh;
@@ -186,9 +171,6 @@ private:
 
   /// UUIDs of the fields to import
   string_array m_uuidsFieldsToImport;
-
-  // Name of the fields to import
-  string_array m_fieldsToImport;
 
   /// UUIDs of the surfaces to import
   string_array m_uuidsSurfacesToImport;
@@ -206,9 +188,9 @@ private:
   vtk::PartitionMethod m_partitionMethod = vtk::PartitionMethod::parmetis;
 
   /// Lists of VTK cell ids, organized by element type, then by region
-  vtk::CellMapType m_cellMap;
+  CellMapType m_cellMap;
 };
 
-} // namespace geos
+} // namespace geosx
 
-#endif /* GEOS_EXTERNALCOMPONENTS_RESQML_RESQMLMESHGENERATOR_HPP */
+#endif /* GEOSX_MESH_GENERATORS_RESQMLMESHGENERATOR_HPP */

@@ -1,41 +1,184 @@
-/*
- * ------------------------------------------------------------------------------------------------------------
- * SPDX-License-Identifier: LGPL-2.1-only
- *
- * Copyright (c) 2018-2020 Lawrence Livermore National Security LLC
- * Copyright (c) 2018-2020 The Board of Trustees of the Leland Stanford Junior University
- * Copyright (c) 2018-2020 Total, S.A
- * Copyright (c) 2019-     GEOS Contributors
- * All rights reserved
- *
- * See top level LICENSE, COPYRIGHT, CONTRIBUTORS, NOTICE, and ACKNOWLEDGEMENTS files for details.
- * ------------------------------------------------------------------------------------------------------------
- */
 
-/**
- * @file RESQMLUtilities.cpp
- */
+#include "vtkRESQMLUnstructuredGridReader.h"
 
-#include "RESQMLUtilities.hpp"
 
+
+#include <vtkObjectFactory.h>
+#include <vtkStreamingDemandDrivenPipeline.h>
+#include <vtkInformationVector.h>
+#include <vtkInformation.h>
+#include <vtkDataObject.h>
 #include <vtkNew.h>
 #include <vtkSmartPointer.h>
-#include <vtkIdList.h>
-#include <vtkCellData.h>
+
 #include <vtkDoubleArray.h>
-#include <vtkIntArray.h>
 
-
-#include "fesapi/resqml2/AbstractLocal3dCrs.h"
-#include "fesapi/resqml2/CategoricalProperty.h"
-#include "fesapi/resqml2/ContinuousProperty.h"
-#include "fesapi/resqml2/DiscreteProperty.h"
-#include "fesapi/resqml2/SubRepresentation.h"
+#include <vtkUnstructuredGrid.h>
+#include <vtkPolyhedron.h>
+#include <vtkTetra.h>
+#include <vtkHexagonalPrism.h>
+#include <vtkPentagonalPrism.h>
+#include <vtkHexahedron.h>
+#include <vtkPyramid.h>
+#include <vtkWedge.h>
 
 #include <array>
 
-namespace geos
+vtkStandardNewMacro( vtkRESQMLUnstructuredGridReader )
+
+vtkRESQMLUnstructuredGridReader::vtkRESQMLUnstructuredGridReader()
 {
+  this->SetNumberOfInputPorts( 0 );
+  this->SetNumberOfOutputPorts( 1 );
+}
+
+vtkRESQMLUnstructuredGridReader::~vtkRESQMLUnstructuredGridReader()
+{}
+
+//----------------------------------------------------------------------------
+void vtkRESQMLUnstructuredGridReader::PrintSelf( ostream & os, vtkIndent indent )
+{
+  this->Superclass::PrintSelf( os, indent );
+
+  os << indent << "Uuid: "
+     << this->UnstructuredGridRepresentation->getUuid() << "\n"
+     << indent << "Node count: "
+     << this->UnstructuredGridRepresentation->getNodeCount() << "\n"
+     << indent << "Face count: "
+     << this->UnstructuredGridRepresentation->getFaceCount() << "\n"
+     << indent << "Cell count: "
+     << this->UnstructuredGridRepresentation->getCellCount() << "\n";
+}
+
+int vtkRESQMLUnstructuredGridReader::RequestData(
+  vtkInformation *vtkNotUsed( request ),
+  vtkInformationVector * *vtkNotUsed( inputVector ),
+  vtkInformationVector *outputVector )
+{
+  // get the info objects
+  vtkInformation * outInfo = outputVector->GetInformationObject( 0 );
+
+  // get the output
+  vtkUnstructuredGrid * output =
+    vtkUnstructuredGrid::SafeDownCast( outInfo->Get( vtkDataObject::DATA_OBJECT()));
+
+  output->Allocate( this->UnstructuredGridRepresentation->getCellCount());
+
+  this->buildUnstructuredGrid( output );
+
+  vtkDebugMacro( << "Extracted " << output->GetNumberOfPoints() << " points,"
+                 << output->GetNumberOfCells() << " cells." );
+
+  return 1;
+}
+
+void vtkRESQMLUnstructuredGridReader::buildUnstructuredGrid( vtkSmartPointer< vtkUnstructuredGrid > vtk_unstructuredGrid )
+{
+  uint64_t pointCount = this->UnstructuredGridRepresentation->getXyzPointCountOfAllPatches();
+
+  // POINTS
+  double *allXyzPoints = new double[pointCount * 3]; // Will be deleted by VTK;
+  this->UnstructuredGridRepresentation->getXyzPointsOfAllPatches( allXyzPoints ); //getXyzPointsOfAllPatchesInGlobalCrs
+
+  const size_t coordCount = pointCount * 3;
+
+  if( this->UnstructuredGridRepresentation->getLocalCrs( 0 ) != nullptr )
+  {
+    if( !this->UnstructuredGridRepresentation->getLocalCrs( 0 )->isPartial())
+    {
+      const double zIndice = this->UnstructuredGridRepresentation->getLocalCrs( 0 )->isDepthOriented() ? -1 : 1;
+
+      for( size_t zCoordIndex = 2; zCoordIndex < coordCount; zCoordIndex += 3 )
+      {
+        allXyzPoints[zCoordIndex] *= zIndice;
+      }
+    }
+  }
+
+  vtkNew< vtkDoubleArray > vtkUnderlyingArray;
+  vtkUnderlyingArray->SetNumberOfComponents( 3 );
+  // Take ownership of the underlying C array
+  vtkUnderlyingArray->SetArray( allXyzPoints, coordCount, vtkAbstractArray::VTK_DATA_ARRAY_DELETE );
+
+  vtkNew< vtkPoints > vtkPts;
+  vtkPts->SetData( vtkUnderlyingArray );
+
+  vtk_unstructuredGrid->SetPoints( vtkPts );
+  this->UnstructuredGridRepresentation->loadGeometry();
+  // CELLS
+  const unsigned int nodeCount = this->UnstructuredGridRepresentation->getNodeCount();
+  std::unique_ptr< vtkIdType[] > pointIds( new vtkIdType[nodeCount] );
+  for( unsigned int i = 0; i < nodeCount; ++i )
+  {
+    pointIds[i] = i;
+  }
+  const ULONG64 cellCount = this->UnstructuredGridRepresentation->getCellCount();
+  ULONG64 const *cumulativeFaceCountPerCell = this->UnstructuredGridRepresentation->isFaceCountOfCellsConstant()
+                          ? nullptr
+                          : this->UnstructuredGridRepresentation->getCumulativeFaceCountPerCell(); // This pointer is owned and managed by
+                                                                                                   // FESAPI
+
+  std::unique_ptr< unsigned char[] > cellFaceNormalOutwardlyDirected( new unsigned char[cumulativeFaceCountPerCell == nullptr
+                                               ? cellCount * this->UnstructuredGridRepresentation->getConstantFaceCountOfCells()
+                                               : cumulativeFaceCountPerCell[cellCount - 1]] );
+
+  this->UnstructuredGridRepresentation->getCellFaceIsRightHanded( cellFaceNormalOutwardlyDirected.get());
+
+  for( ULONG64 cellIndex = 0; cellIndex < cellCount; ++cellIndex )
+  {
+    bool isOptimizedCell = false;
+
+
+    const ULONG64 localFaceCount = this->UnstructuredGridRepresentation->getFaceCountOfCell( cellIndex );
+
+    if( localFaceCount == 4 )
+    { // VTK_TETRA
+      cellVtkTetra( vtk_unstructuredGrid, this->UnstructuredGridRepresentation, cumulativeFaceCountPerCell, cellFaceNormalOutwardlyDirected.get(), cellIndex );
+      isOptimizedCell = true;
+    }
+    else if( localFaceCount == 5 )
+    { // VTK_WEDGE or VTK_PYRAMID
+      cellVtkWedgeOrPyramid( vtk_unstructuredGrid, this->UnstructuredGridRepresentation, cumulativeFaceCountPerCell, cellFaceNormalOutwardlyDirected.get(), cellIndex );
+      isOptimizedCell = true;
+    }
+    else if( localFaceCount == 6 )
+    { // VTK_HEXAHEDRON
+      isOptimizedCell = cellVtkHexahedron( vtk_unstructuredGrid, this->UnstructuredGridRepresentation, cumulativeFaceCountPerCell, cellFaceNormalOutwardlyDirected.get(), cellIndex );
+    }
+    else if( localFaceCount == 7 )
+    { // VTK_PENTAGONAL_PRISM
+      isOptimizedCell = cellVtkPentagonalPrism( vtk_unstructuredGrid, this->UnstructuredGridRepresentation, cellIndex );
+    }
+    else if( localFaceCount == 8 )
+    { // VTK_HEXAGONAL_PRISM
+      isOptimizedCell = cellVtkHexagonalPrism( vtk_unstructuredGrid, this->UnstructuredGridRepresentation, cellIndex );
+    }
+
+    if( !isOptimizedCell )
+    {
+      vtkNew< vtkIdList > idList;
+
+      // For polyhedron cell, a special ptIds input format is required : (numCellFaces, numFace0Pts, id1, id2, id3, numFace1Pts, id1, id2,
+      // id3, ...)
+      idList->InsertNextId( localFaceCount );
+      for( ULONG64 localFaceIndex = 0; localFaceIndex < localFaceCount; ++localFaceIndex )
+      {
+        const unsigned int localNodeCount = this->UnstructuredGridRepresentation->getNodeCountOfFaceOfCell( cellIndex, localFaceIndex );
+        idList->InsertNextId( localNodeCount );
+        ULONG64 const *nodeIndices = this->UnstructuredGridRepresentation->getNodeIndicesOfFaceOfCell( cellIndex, localFaceIndex );
+        for( unsigned int i = 0; i < localNodeCount; ++i )
+        {
+          idList->InsertNextId( nodeIndices[i] );
+        }
+      }
+
+      vtk_unstructuredGrid->InsertNextCell( VTK_POLYHEDRON, idList );
+    }
+  }
+
+  this->UnstructuredGridRepresentation->unloadGeometry();
+}
+
 
 //----------------------------------------------------------------------------
 void cellVtkTetra( vtkSmartPointer< vtkUnstructuredGrid > vtk_unstructuredGrid,
@@ -77,12 +220,12 @@ void cellVtkTetra( vtkSmartPointer< vtkUnstructuredGrid > vtk_unstructuredGrid,
     }
   }
 
-  vtkNew< vtkIdList > tetra;
+  vtkSmartPointer< vtkTetra > tetra = vtkSmartPointer< vtkTetra >::New();
   for( vtkIdType pointId = 0; pointId < 4; ++pointId )
   {
-    tetra->InsertId( pointId, nodes[pointId] );
+    tetra->GetPointIds()->SetId( pointId, nodes[pointId] );
   }
-  vtk_unstructuredGrid->InsertNextCell( VTK_TETRA, tetra );
+  vtk_unstructuredGrid->InsertNextCell( tetra->GetCellType(), tetra->GetPointIds());
 }
 
 //----------------------------------------------------------------------------
@@ -218,12 +361,12 @@ void cellVtkWedgeOrPyramid( vtkSmartPointer< vtkUnstructuredGrid > vtk_unstructu
       }
     }
 
-    vtkNew< vtkIdList > wedge;
+    vtkSmartPointer< vtkWedge > wedge = vtkSmartPointer< vtkWedge >::New();
     for( int nodesIndex = 0; nodesIndex < 6; ++nodesIndex )
     {
-      wedge->InsertId( nodesIndex, nodes[nodesIndex] );
+      wedge->GetPointIds()->SetId( nodesIndex, nodes[nodesIndex] );
     }
-    vtk_unstructuredGrid->InsertNextCell( VTK_WEDGE, wedge );
+    vtk_unstructuredGrid->InsertNextCell( wedge->GetCellType(), wedge->GetPointIds());
   }
   else if( localFaceIndexWith4Nodes.size() == 1 )
   { // VTK_PYRAMID
@@ -262,12 +405,12 @@ void cellVtkWedgeOrPyramid( vtkSmartPointer< vtkUnstructuredGrid > vtk_unstructu
       }
     }
 
-    vtkNew< vtkIdList > pyramid;
+    vtkSmartPointer< vtkPyramid > pyramid = vtkSmartPointer< vtkPyramid >::New();
     for( int nodesIndex = 0; nodesIndex < 5; ++nodesIndex )
     {
-      pyramid->InsertId( nodesIndex, nodes[nodesIndex] );
+      pyramid->GetPointIds()->SetId( nodesIndex, nodes[nodesIndex] );
     }
-    vtk_unstructuredGrid->InsertNextCell( VTK_PYRAMID, pyramid );
+    vtk_unstructuredGrid->InsertNextCell( pyramid->GetCellType(), pyramid->GetPointIds());
   }
   else
   {
@@ -343,12 +486,12 @@ bool cellVtkHexahedron( vtkSmartPointer< vtkUnstructuredGrid > vtk_unstructuredG
     }
   }
 
-  vtkNew< vtkIdList > hexahedron;
+  vtkSmartPointer< vtkHexahedron > hexahedron = vtkSmartPointer< vtkHexahedron >::New();
   for( int nodesIndex = 0; nodesIndex < 8; ++nodesIndex )
   {
-    hexahedron->InsertId( nodesIndex, nodes[nodesIndex] );
+    hexahedron->GetPointIds()->SetId( nodesIndex, nodes[nodesIndex] );
   }
-  vtk_unstructuredGrid->InsertNextCell( VTK_HEXAHEDRON, hexahedron );
+  vtk_unstructuredGrid->InsertNextCell( hexahedron->GetCellType(), hexahedron->GetPointIds());
   return true;
 }
 
@@ -374,12 +517,13 @@ bool cellVtkPentagonalPrism( vtkSmartPointer< vtkUnstructuredGrid > vtk_unstruct
   }
   if( faceTo5Nodes == 2 )
   {
-    vtkNew< vtkIdList > pentagonalPrism;
+    vtkSmartPointer< vtkPentagonalPrism > pentagonalPrism = vtkSmartPointer< vtkPentagonalPrism >::New();
     for( int nodesIndex = 0; nodesIndex < 10; ++nodesIndex )
     {
-      pentagonalPrism->InsertId( nodesIndex, nodes[nodesIndex] );
+      pentagonalPrism->GetPointIds()->SetId( nodesIndex, nodes[nodesIndex] );
     }
-    vtk_unstructuredGrid->InsertNextCell( VTK_PENTAGONAL_PRISM, pentagonalPrism );
+    vtk_unstructuredGrid->InsertNextCell( pentagonalPrism->GetCellType(), pentagonalPrism->GetPointIds());
+    pentagonalPrism = nullptr;
     return true;
   }
   return false;
@@ -407,336 +551,14 @@ bool cellVtkHexagonalPrism( vtkSmartPointer< vtkUnstructuredGrid > vtk_unstructu
   }
   if( faceTo6Nodes == 2 )
   {
-    vtkNew< vtkIdList > hexagonalPrism;
+    vtkSmartPointer< vtkHexagonalPrism > hexagonalPrism = vtkSmartPointer< vtkHexagonalPrism >::New();
     for( int nodesIndex = 0; nodesIndex < 12; ++nodesIndex )
     {
-      hexagonalPrism->InsertId( nodesIndex, nodes[nodesIndex] );
+      hexagonalPrism->GetPointIds()->SetId( nodesIndex, nodes[nodesIndex] );
     }
-    vtk_unstructuredGrid->InsertNextCell( VTK_HEXAGONAL_PRISM, hexagonalPrism );
+    vtk_unstructuredGrid->InsertNextCell( hexagonalPrism->GetCellType(), hexagonalPrism->GetPointIds());
+    hexagonalPrism = nullptr;
     return true;
   }
   return false;
 }
-
-
-int readContinuousProperty( RESQML2_NS::AbstractValuesProperty * valuesProperty, string name, vtkCellData * outDS )
-{
-  const unsigned int elementCountPerValue = valuesProperty->getElementCountPerValue();
-  const unsigned int totalHDFElementcount = valuesProperty->getValuesCountOfPatch( 0 );
-
-  double * valueIndices = new double[totalHDFElementcount]; // deleted by VTK cellData vtkSmartPointer
-
-  valuesProperty->getDoubleValuesOfPatch( 0, valueIndices );
-
-  //TODO find a better way to handle NaN data
-  for( unsigned int x = 0; x < totalHDFElementcount; ++x )
-  {
-    if( std::isnan( valueIndices[x] ))
-    {
-      valueIndices[x] = 0.00000001;
-    }
-  }
-
-  vtkNew< vtkDoubleArray > cellData;
-  cellData->SetArray( valueIndices, totalHDFElementcount, 0, vtkAbstractArray::VTK_DATA_ARRAY_DELETE );
-  cellData->SetName( name.c_str());
-  cellData->SetNumberOfComponents( elementCountPerValue );
-
-  outDS->AddArray( cellData );
-
-  return 1;
-}
-
-int readDiscreteOrCategoricalProperty( RESQML2_NS::AbstractValuesProperty * valuesProperty, string name, vtkCellData * outDS )
-{
-  const unsigned int elementCountPerValue = valuesProperty->getElementCountPerValue();
-  const unsigned int totalHDFElementcount = valuesProperty->getValuesCountOfPatch( 0 );
-
-  int * valueIndices = new int[totalHDFElementcount]; // deleted by VTK cellData vtkSmartPointer
-
-  valuesProperty->getIntValuesOfPatch( 0, valueIndices );
-
-  //TODO handle NaN ?
-
-  vtkNew< vtkIntArray > cellData;
-  cellData->SetArray( valueIndices, totalHDFElementcount, 0, vtkAbstractArray::VTK_DATA_ARRAY_DELETE );
-  cellData->SetName( name.c_str());
-  cellData->SetNumberOfComponents( elementCountPerValue );
-
-  outDS->AddArray( cellData );
-
-  return 1;
-}
-
-
-vtkSmartPointer< vtkUnstructuredGrid >
-loadUnstructuredGridRepresentation( RESQML2_NS::UnstructuredGridRepresentation *grid )
-{
-  auto vtk_unstructuredGrid = vtkSmartPointer< vtkUnstructuredGrid >::New();
-
-  vtk_unstructuredGrid->Allocate( grid->getCellCount());
-
-
-  uint64_t pointCount = grid->getXyzPointCountOfAllPatches();
-
-  // POINTS
-  double *allXyzPoints = new double[pointCount * 3]; // Will be deleted by VTK;
-  grid->getXyzPointsOfAllPatches( allXyzPoints ); //getXyzPointsOfAllPatchesInGlobalCrs
-
-  const size_t coordCount = pointCount * 3;
-
-  if( grid->getLocalCrs( 0 ) != nullptr )
-  {
-    if( !grid->getLocalCrs( 0 )->isPartial())
-    {
-      const double zIndice = grid->getLocalCrs( 0 )->isDepthOriented() ? -1 : 1;
-
-      for( size_t zCoordIndex = 2; zCoordIndex < coordCount; zCoordIndex += 3 )
-      {
-        allXyzPoints[zCoordIndex] *= zIndice;
-      }
-    }
-  }
-
-  vtkNew< vtkDoubleArray > vtkUnderlyingArray;
-  vtkUnderlyingArray->SetNumberOfComponents( 3 );
-  // Take ownership of the underlying C array
-  vtkUnderlyingArray->SetArray( allXyzPoints, coordCount, vtkAbstractArray::VTK_DATA_ARRAY_DELETE );
-
-  vtkNew< vtkPoints > vtkPts;
-  vtkPts->SetData( vtkUnderlyingArray );
-
-  vtk_unstructuredGrid->SetPoints( vtkPts );
-  grid->loadGeometry();
-  // CELLS
-  const unsigned int nodeCount = grid->getNodeCount();
-  std::unique_ptr< vtkIdType[] > pointIds( new vtkIdType[nodeCount] );
-  for( unsigned int i = 0; i < nodeCount; ++i )
-  {
-    pointIds[i] = i;
-  }
-  const ULONG64 cellCount = grid->getCellCount();
-  // This pointer is owned and managed by FESAPI
-  ULONG64 const *cumulativeFaceCountPerCell = grid->isFaceCountOfCellsConstant()
-                          ? nullptr
-                          : grid->getCumulativeFaceCountPerCell();
-
-  const uint64_t faceCount = cumulativeFaceCountPerCell == nullptr
-    ? cellCount * grid->getConstantFaceCountOfCells()
-    : cumulativeFaceCountPerCell[cellCount - 1];
-
-  std::unique_ptr< unsigned char[] > cellFaceNormalOutwardlyDirected( new unsigned char[faceCount] );
-
-  grid->getCellFaceIsRightHanded( cellFaceNormalOutwardlyDirected.get());
-
-  auto * crs = grid->getLocalCrs( 0 );
-  if( !crs->isPartial() && crs->isDepthOriented())
-  {
-    for( size_t i = 0; i < faceCount; ++i )
-    {
-      cellFaceNormalOutwardlyDirected[i] = !cellFaceNormalOutwardlyDirected[i];
-    }
-  }
-
-  for( ULONG64 cellIndex = 0; cellIndex < cellCount; ++cellIndex )
-  {
-    bool isOptimizedCell = false;
-
-
-    const ULONG64 localFaceCount = grid->getFaceCountOfCell( cellIndex );
-
-    if( localFaceCount == 4 )
-    { // VTK_TETRA
-      cellVtkTetra( vtk_unstructuredGrid, grid, cumulativeFaceCountPerCell, cellFaceNormalOutwardlyDirected.get(), cellIndex );
-      isOptimizedCell = true;
-    }
-    else if( localFaceCount == 5 )
-    { // VTK_WEDGE or VTK_PYRAMID
-      cellVtkWedgeOrPyramid( vtk_unstructuredGrid, grid, cumulativeFaceCountPerCell, cellFaceNormalOutwardlyDirected.get(), cellIndex );
-      isOptimizedCell = true;
-    }
-    else if( localFaceCount == 6 )
-    { // VTK_HEXAHEDRON
-      isOptimizedCell = cellVtkHexahedron( vtk_unstructuredGrid, grid, cumulativeFaceCountPerCell, cellFaceNormalOutwardlyDirected.get(), cellIndex );
-    }
-    else if( localFaceCount == 7 )
-    { // VTK_PENTAGONAL_PRISM
-      isOptimizedCell = cellVtkPentagonalPrism( vtk_unstructuredGrid, grid, cellIndex );
-    }
-    else if( localFaceCount == 8 )
-    { // VTK_HEXAGONAL_PRISM
-      isOptimizedCell = cellVtkHexagonalPrism( vtk_unstructuredGrid, grid, cellIndex );
-    }
-
-    if( !isOptimizedCell )
-    {
-      vtkNew< vtkIdList > idList;
-
-      // For polyhedron cell, a special ptIds input format is required : (numCellFaces, numFace0Pts, id1, id2, id3, numFace1Pts, id1, id2,
-      // id3, ...)
-      idList->InsertNextId( localFaceCount );
-      for( ULONG64 localFaceIndex = 0; localFaceIndex < localFaceCount; ++localFaceIndex )
-      {
-        const unsigned int localNodeCount = grid->getNodeCountOfFaceOfCell( cellIndex, localFaceIndex );
-        idList->InsertNextId( localNodeCount );
-        ULONG64 const *nodeIndices = grid->getNodeIndicesOfFaceOfCell( cellIndex, localFaceIndex );
-        for( unsigned int i = 0; i < localNodeCount; ++i )
-        {
-          idList->InsertNextId( nodeIndices[i] );
-        }
-      }
-
-      vtk_unstructuredGrid->InsertNextCell( VTK_POLYHEDRON, idList );
-    }
-  }
-
-  grid->unloadGeometry();
-
-  return vtk_unstructuredGrid;
-}
-
-vtkSmartPointer< vtkDataSet >
-loadProperty( vtkSmartPointer< vtkDataSet > dataset, RESQML2_NS::AbstractValuesProperty *valuesProperty, string fieldNameInGEOS )
-{
-  const gsoap_eml2_3::eml23__IndexableElement element = valuesProperty->getAttachmentKind();
-
-  if( element != gsoap_eml2_3::eml23__IndexableElement::cells )
-  {
-    GEOS_ERROR( GEOS_FMT( "Property indexable element must be cells. Error with {}", valuesProperty->getUuid() ) );
-  }
-
-  std::string typeProperty = valuesProperty->getXmlTag();
-  if( typeProperty == RESQML2_NS::ContinuousProperty::XML_TAG )
-  {
-    readContinuousProperty( valuesProperty, fieldNameInGEOS, dataset->GetCellData() );
-  }
-  else if( typeProperty == RESQML2_NS::DiscreteProperty::XML_TAG ||
-           typeProperty == RESQML2_NS::CategoricalProperty::XML_TAG )
-  {
-    readDiscreteOrCategoricalProperty( valuesProperty, fieldNameInGEOS, dataset->GetCellData() );
-  }
-  else
-  {
-    GEOS_ERROR( GEOS_FMT( "Property {} not supported...", valuesProperty->getUuid() ) );
-  }
-
-  return dataset;
-}
-
-vtkSmartPointer< vtkDataSet >
-createRegions( vtkSmartPointer< vtkDataSet > dataset, std::vector< RESQML2_NS::SubRepresentation * > regions, string attributeName )
-{
-  int region_id = 0;
-
-  vtkIntArray * arr = vtkIntArray::New();
-  arr->SetName( attributeName.c_str());
-  arr->SetNumberOfComponents( 1 );
-  arr->SetNumberOfTuples( dataset->GetNumberOfCells());
-  arr->FillValue( region_id );
-
-  vtkDataArrayAccessor< vtkIntArray > attribute( arr );
-
-  for( std::size_t i = 0; i < regions.size(); ++i )
-  {
-    region_id+=1;
-
-    RESQML2_NS::SubRepresentation * region = regions[i];
-
-    if( region->getElementKindOfPatch( 0, 0 ) != gsoap_eml2_3::eml23__IndexableElement::faces )
-    {
-      uint64_t elementCountOfPatch = region->getElementCountOfPatch( 0 );
-      std::unique_ptr< uint64_t[] > elementIndices( new uint64_t[elementCountOfPatch] );
-      region->getElementIndicesOfPatch( 0, 0, elementIndices.get() );
-
-      for( std::size_t j = 0; j < elementCountOfPatch; ++j )
-      {
-        attribute.Set( vtkIdType( elementIndices[j] ), 0, region_id );
-      }
-    }
-  }
-  dataset->GetCellData()->AddArray( arr );
-
-  return dataset;
-}
-
-vtkUnstructuredGrid *
-createSurfaces( vtkSmartPointer< vtkDataSet > dataset, std::vector< RESQML2_NS::SubRepresentation * > surfaces, string regionAttributeName )
-{
-  vtkUnstructuredGrid * grid = vtkUnstructuredGrid::SafeDownCast( dataset );
-
-  vtkCellData * cell_data = grid->GetCellData();
-  auto * region_ids = vtkIntArray::SafeDownCast( cell_data->GetAbstractArray( regionAttributeName.c_str()));
-  auto * min_max = region_ids->GetRange();
-  int region_id = min_max[1];
-
-  for( std::size_t i = 0; i < surfaces.size(); ++i )
-  {
-    RESQML2_NS::SubRepresentation * surface = surfaces[i];
-
-    // FACES
-    auto *supportingGrid = dynamic_cast< RESQML2_NS::UnstructuredGridRepresentation * >(surface->getSupportingRepresentation( 0 ));
-
-    const uint64_t gridFaceCount = supportingGrid->getFaceCount();
-    std::unique_ptr< uint64_t[] > nodeCountOfFaces( new uint64_t[gridFaceCount] );
-    supportingGrid->getCumulativeNodeCountPerFace( nodeCountOfFaces.get());
-
-    std::unique_ptr< uint64_t[] > nodeIndices( new uint64_t[nodeCountOfFaces[gridFaceCount-1]] );
-    supportingGrid->getNodeIndicesOfFaces( nodeIndices.get());
-
-    const uint64_t subFaceCount = surface->getElementCountOfPatch( 0 );
-    std::unique_ptr< uint64_t[] > elementIndices( new uint64_t[subFaceCount] );
-    surface->getElementIndicesOfPatch( 0, 0, elementIndices.get());
-
-    region_id += 1;
-    for( uint64_t subFaceIndex =0; subFaceIndex < subFaceCount; ++subFaceIndex )
-    {
-      uint64_t faceIndex = elementIndices[subFaceIndex];
-      auto first_indiceValue = faceIndex == 0 ? 0 : nodeCountOfFaces[faceIndex - 1];
-      uint64_t nodeCount_OfFaceIndex = nodeCountOfFaces[faceIndex] - first_indiceValue;
-
-      vtkIdType cell_type = VTK_POLYGON;
-      if( nodeCount_OfFaceIndex == 3 )
-      {
-        cell_type = VTK_TRIANGLE;
-      }
-      else if( nodeCount_OfFaceIndex == 4 )
-      {
-        cell_type = VTK_QUAD;
-      }
-
-      vtkNew< vtkIdList > idList;
-      for( uint64_t nodeIndex = 0; nodeIndex < nodeCount_OfFaceIndex; ++nodeIndex, ++first_indiceValue )
-      {
-        idList->InsertId( nodeIndex, nodeIndices[first_indiceValue] );
-      }
-
-      vtkIdType newCellId = grid->InsertNextCell( cell_type, idList );
-
-      for( int arrayIdx = 0; arrayIdx < cell_data->GetNumberOfArrays(); ++arrayIdx )
-      {
-        auto * abArray = cell_data->GetAbstractArray( arrayIdx );
-        if( abArray->GetName()==regionAttributeName )
-        {
-          vtkIntArray * ar = vtkArrayDownCast< vtkIntArray >( abArray );
-          ar->InsertValue( newCellId, region_id );
-        }
-        else
-        {
-          int numComps = abArray->GetNumberOfComponents();
-          vtkDoubleArray * ar = vtkArrayDownCast< vtkDoubleArray >( abArray );
-          if( ar != nullptr )
-          {
-            for( int comp = 0; comp < numComps; ++comp )
-            {
-              ar->InsertTypedComponent( newCellId, comp, -9999. );
-            }
-          }
-        }
-      }
-    }
-  }
-
-  return grid;
-}
-
-} // namespace geos
