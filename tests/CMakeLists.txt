@@ -12,6 +12,7 @@ endif()
 
 set(myNewComponentTests
     testRESQMLImport.cpp
+    testRESQMLDataObjectRepository.cpp
    )
 
 #
