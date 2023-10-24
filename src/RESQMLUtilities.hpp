@@ -23,13 +23,36 @@
 
 #include <vtkSmartPointer.h>
 #include <vtkUnstructuredGrid.h>
+#include <vtkExplicitStructuredGrid.h>
 #include <vtkDataSet.h>
 
 #include "fesapi/resqml2/UnstructuredGridRepresentation.h"
-
+#include "fesapi/resqml2/AbstractIjkGridRepresentation.h"
 
 namespace geos
 {
+
+/**
+ * @brief Load a RESQML Grid
+ * 
+ * @param[in] rep The RESQML grid ad an AbstractObject
+ * @return the loaded dataset
+ * 
+ * @todo Handle hyperslab
+ * @details Handles UnstructuredGridRepresentation and IjkGridRepresentation
+ */
+vtkSmartPointer< vtkDataSet >
+loadGridRepresentation(COMMON_NS::AbstractObject *rep );
+
+/**
+ * @brief Load an IjkGridRepresentation
+ * 
+ * @param[in] rep 
+ * @return The loaded dataset
+ */
+vtkSmartPointer< vtkDataSet >
+loadIjkGridRepresentation(RESQML2_NS::AbstractIjkGridRepresentation* rep);
+
 
 /**
  * @brief Load a RESQML UnstructuredGriRepresentation in a vtkUnstructuredGrid
@@ -37,7 +60,7 @@ namespace geos
  * @param[in] grid The RESQML UnstructuredGriRepresentation
  * @return The loaded dataset
  */
-vtkSmartPointer< vtkUnstructuredGrid >
+vtkSmartPointer< vtkDataSet >
 loadUnstructuredGridRepresentation( RESQML2_NS::UnstructuredGridRepresentation *grid );
 
 /**

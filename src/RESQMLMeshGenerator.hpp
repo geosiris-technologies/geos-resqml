@@ -32,6 +32,8 @@
 namespace geos
 {
 
+class EnergyMLDataObjectRepository;
+
 /**
  *  @class RESQMLMeshGenerator
  *  @brief The RESQMLMeshGenerator class provides a class implementation of RESQML generated meshes from the Fesapi library.
@@ -53,6 +55,12 @@ public:
    * @return string that contains the key name to RESQMLMeshGenerator in the Catalog
    */
   static string catalogName() { return "RESQMLMesh"; }
+
+
+  Group * createChild( string const & childKey, string const & childName ) override;
+
+  void expandObjectCatalogs() override;
+
 
   /**
    * @brief Generate the mesh using fesapi library
@@ -80,6 +88,10 @@ public:
    */
   std::tuple< string, string > getParentRepresentation() const;
 
+
+  const std::string& getTitle() const { return m_title; }
+  const std::string& getUuid() const { return m_uuid; }
+
 protected:
 
   /**
@@ -93,17 +105,23 @@ private:
   ///@cond DO_NOT_DOCUMENT
   struct viewKeyStruct
   {
-    constexpr static char const * uuidString() { return "UUID"; }
-    constexpr static char const * titleInFileString() { return "titleInFile"; }
-    constexpr static char const * uuidsRegionsToImportString() { return "UUIDsRegionsToImport"; }
+    constexpr static char const * repositoryString() { return "repositoryName"; }
+    constexpr static char const * uuidString() { return "uuid"; }
+    constexpr static char const * titleString() { return "title"; }    
     constexpr static char const * regionAttributeString() { return "regionAttribute"; }
-    constexpr static char const * uuidsFieldsToImportString() { return "UUIDsFieldsToImport"; }
-    constexpr static char const * fieldsToImportString() { return "fieldsToImport"; }    
-    constexpr static char const * uuidsSurfacesToImportString() { return "UUIDsSurfacesToImport"; }
+    // constexpr static char const * uuidsFieldsToImportString() { return "UUIDsFieldsToImport"; }
+    // constexpr static char const * fieldsToImportString() { return "fieldsToImport"; }    
+    // constexpr static char const * uuidsSurfacesToImportString() { return "UUIDsSurfacesToImport"; }
     constexpr static char const * nodesetNamesString() { return "nodesetNames"; }
     constexpr static char const * partitionRefinementString() { return "partitionRefinement"; }
     constexpr static char const * partitionMethodString() { return "partitionMethod"; }
     constexpr static char const * useGlobalIdsString() { return "useGlobalIds"; }
+  };
+
+  struct groupKeyStruct
+  {
+    static constexpr char const * regionString() { return "Region"; }
+    static constexpr char const * propertyString() { return "Property"; }
   };
   /// @endcond
 
@@ -166,12 +184,18 @@ private:
 
 
   ///Repository of RESQML objects
-  common::DataObjectRepository * m_repository;
+  EnergyMLDataObjectRepository * m_repository;
+  string m_objectName;
 
   /// UUID and title of the mesh
-  string m_parent_uuid;
-  string m_parent_title;
+  string m_uuid;
+  string m_title;
 
+
+  string_array m_regions;
+
+  string_array m_properties;
+  
   /**
    * @brief The VTK mesh to be imported into GEOS.
    * @note We keep this smart pointer as a member for use in @p importFields().

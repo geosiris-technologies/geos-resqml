@@ -1,14 +1,14 @@
 #ifndef GEOSX_MESH_GENERATORS_RESQML_ETPREPOSITORY_HPP
 #define GEOSX_MESH_GENERATORS_RESQML_ETPREPOSITORY_HPP
 
-#include "mesh/generators/RESQML/RESQMLDataObjectRepository.hpp"
+#include "EnergyMLDataObjectRepository.hpp"
 
-#include <fetpapi/etp/ClientSessionLaunchers.h>
+// #include <fetpapi/etp/ClientSessionLaunchers.h>
 
-namespace geosx
+namespace geos
 {
 
-class ETPRepository : public RESQMLDataObjectRepository
+class ETPRepository : public EnergyMLDataObjectRepository
 {
 public:
 
@@ -36,7 +36,7 @@ protected:
 
 private:
     /// ETP Session
-    std::shared_ptr<ETP_NS::PlainClientSession> m_session;
+    // std::shared_ptr<ETP_NS::PlainClientSession> m_session;
 
     ///
     string m_ipConnection;

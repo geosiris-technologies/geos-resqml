@@ -27,9 +27,11 @@ set(componentHeaders
   RESQMLWriterInterface.hpp
   RESQMLMeshGenerator.hpp
   RESQMLUtilities.hpp
-  RESQMLDataObjectRepository.hpp
+  EnergyMLDataObjectRepository.hpp
   EpcDocumentRepository.hpp
   ETPRepository.hpp
+  Property.hpp
+  Region.hpp
 )
 
 #
@@ -40,9 +42,11 @@ set(componentSources
   RESQMLWriterInterface.cpp
   RESQMLMeshGenerator.cpp
   RESQMLOutput.cpp
-  RESQMLDataObjectRepository.cpp
+  EnergyMLDataObjectRepository.cpp
   EpcDocumentRepository.cpp
   ETPRepository.cpp
+  Property.cpp
+  Region.cpp
 )
 
 #

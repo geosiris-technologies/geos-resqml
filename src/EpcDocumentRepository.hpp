@@ -1,14 +1,14 @@
 #ifndef GEOSX_MESH_GENERATORS_RESQML_EPCDOCUMENTREPOSITORY_HPP
 #define GEOSX_MESH_GENERATORS_RESQML_EPCDOCUMENTREPOSITORY_HPP
 
-#include "mesh/generators/RESQML/RESQMLDataObjectRepository.hpp"
+#include "EnergyMLDataObjectRepository.hpp"
 
 #include "fesapi/common/EpcDocument.h"
 
-namespace geosx
+namespace geos
 {
 
-class EpcDocumentRepository : public RESQMLDataObjectRepository
+class EpcDocumentRepository : public EnergyMLDataObjectRepository
 {
 public:
 
@@ -29,14 +29,13 @@ public:
 
   string getCatalogName() override { return catalogName(); }
 
-  virtual void test() = 0;
 
 protected:
   
   ///@cond DO_NOT_DOCUMENT
   struct viewKeyStruct
   {
-    constexpr static char const * filePathString() { return "file"; }
+    constexpr static char const * filesPathsString() { return "files"; }
   };
   /// @endcond
 
@@ -44,7 +43,7 @@ protected:
 
 private:
   /// Path to the epc file
-  Path m_filePath;
+  array1d< Path > m_filesPaths;
 };
 
 } // end namespace geosx

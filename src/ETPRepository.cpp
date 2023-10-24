@@ -1,18 +1,18 @@
 
-#include "mesh/generators/RESQML/ETPRepository.hpp"
+#include "ETPRepository.hpp"
 
-namespace geosx
+namespace geos
 {
 
 using namespace dataRepository;
 
 ETPRepository::ETPRepository( string const & name,
                                                       dataRepository::Group * const parent )
-  : RESQMLDataObjectRepository( name, parent )
+  : EnergyMLDataObjectRepository( name, parent )
 {
     enableLogLevelInput();
 
-    registerWrapper( viewKeyStruct:ipConnectionString(), &m_ipConnection ).
+    registerWrapper( viewKeyStruct::ipConnectionString(), &m_ipConnection ).
     setInputFlag( InputFlags::REQUIRED ).
     setRestartFlags( RestartFlags::NO_WRITE ).
     setDescription( "IP from the ETP Server" );
@@ -30,21 +30,21 @@ ETPRepository::ETPRepository( string const & name,
 
 void ETPRepository::postProcessInput()
 {
-	boost::uuids::random_generator gen;
-	ETP_NS::InitializationParameters initializationParams(gen(), ip_connection, port_connection);
+	// boost::uuids::random_generator gen;
+	// ETP_NS::InitializationParameters initializationParams(gen(), ip_connection, port_connection);
 
-	m_session = ETP_NS::ClientSessionLaunchers::createWsClientSession(&initializationParams, "/", auth_connection);
-	m_session->setCoreProtocolHandlers(std::make_shared<FesppCoreProtocolHandlers>(session.get(), repository));
-	m_session->setDiscoveryProtocolHandlers(std::make_shared<FesppDiscoveryProtocolHandlers>(session.get(), repository));
-	auto storeHandlers = std::make_shared<FesppStoreProtocolHandlers>(session.get(), repository);
-	session->setStoreProtocolHandlers(storeHandlers);
-	session->setDataArrayProtocolHandlers(std::make_shared<ETP_NS::DataArrayHandlers>(session.get()));
+	// m_session = ETP_NS::ClientSessionLaunchers::createWsClientSession(&initializationParams, "/", auth_connection);
+	// m_session->setCoreProtocolHandlers(std::make_shared<FesppCoreProtocolHandlers>(session.get(), repository));
+	// m_session->setDiscoveryProtocolHandlers(std::make_shared<FesppDiscoveryProtocolHandlers>(session.get(), repository));
+	// auto storeHandlers = std::make_shared<FesppStoreProtocolHandlers>(session.get(), repository);
+	// session->setStoreProtocolHandlers(storeHandlers);
+	// session->setDataArrayProtocolHandlers(std::make_shared<ETP_NS::DataArrayHandlers>(session.get()));
 
-	repository->setHdfProxyFactory(new ETP_NS::FesapiHdfProxyFactory(session.get()));
+	// repository->setHdfProxyFactory(new ETP_NS::FesapiHdfProxyFactory(session.get()));
 
-	std::thread sessionThread(&ETP_NS::PlainClientSession::run, session);
-	sessionThread.detach();
-	while (!storeHandlers->isDone()) {}
+	// std::thread sessionThread(&ETP_NS::PlainClientSession::run, session);
+	// sessionThread.detach();
+	// while (!storeHandlers->isDone()) {}
 }
 
 } // end namespace geosx

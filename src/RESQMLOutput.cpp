@@ -35,7 +35,7 @@ RESQMLOutput::RESQMLOutput( string const & name,
   , m_plotLevel()
   , m_onlyPlotSpecifiedFieldNames()
   , m_fieldNames( )
-  , m_objectName( )
+  , m_referenceObjectName( )
   , m_writer( getOutputDirectory() )
 {
   registerWrapper( viewKeysStruct::plotFileName, &m_plotFileName ).
@@ -58,17 +58,14 @@ RESQMLOutput::RESQMLOutput( string const & name,
     setInputFlag( InputFlags::OPTIONAL ).
     setDescription( "Names of the fields to output. If this attribute is specified, GEOS outputs all the fields specified by the user, regardless of their `plotLevel`" );
 
-  registerWrapper( viewKeysStruct::objectName, &m_objectName ).
+  registerWrapper( viewKeysStruct::inputRepositoryName, &m_inputRepositoryName ).
+    setInputFlag( InputFlags::OPTIONAL ).
+    setDescription( "The name of the input Data Object Repository from which to retrieve data." );
+    
+  registerWrapper( viewKeysStruct::referenceObjectName, &m_referenceObjectName ).
     setInputFlag( InputFlags::OPTIONAL ).
     setDescription( "The name of the object from which to retrieve field values." );
 
-  registerWrapper( viewKeysStruct::parentMeshUUID, &m_parentMeshUUID ).
-    setInputFlag( InputFlags::OPTIONAL ).
-    setDescription( "The UUID of the grid." );
-
-  registerWrapper( viewKeysStruct::parentMeshName, &m_parentMeshName ).
-    setInputFlag( InputFlags::OPTIONAL ).
-    setDescription( "The name of the grid." );
 }
 
 RESQMLOutput::~RESQMLOutput()
@@ -83,20 +80,20 @@ void RESQMLOutput::postProcessInput()
 //SupportingRepresentation
 
   // Use the information of the parent grid provided by the user
-  if(!m_parentMeshUUID.empty() && !m_parentMeshName.empty())
-  {
-    m_writer.setParentRepresentation( { m_parentMeshUUID, m_parentMeshName } );
-  }
-  else if(!m_objectName.empty())// or search for a RESQML input grid in the simulation deck to fill the blanks
+  // if(!m_parentMeshUUID.empty() && !m_parentMeshName.empty())
+  // {
+  //   m_writer.setParentRepresentation( { m_parentMeshUUID, m_parentMeshName } );
+  // }
+  if(!m_referenceObjectName.empty())// or search for a RESQML input grid in the simulation deck to fill the blanks
   {
     MeshManager & meshManager = this->getGroupByPath< MeshManager >( "/Problem/Mesh" );
-    RESQMLMeshGenerator * resqmlMeshGenerator = meshManager.getGroupPointer< RESQMLMeshGenerator >( m_objectName );
+    RESQMLMeshGenerator * resqmlMeshGenerator = meshManager.getGroupPointer< RESQMLMeshGenerator >( m_referenceObjectName );
 
     GEOS_THROW_IF( resqmlMeshGenerator == nullptr,
-                    getName() << ": RESQMLMesh not found: " << m_objectName,
+                    getName() << ": RESQMLMesh not found: " << m_referenceObjectName,
                     InputError );
     
-    m_writer.setParentRepresentation( resqmlMeshGenerator->getParentRepresentation());
+    m_writer.setParentRepresentation( {resqmlMeshGenerator->getUuid(), resqmlMeshGenerator->getTitle() });
   }
   else
   {

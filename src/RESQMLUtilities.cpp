@@ -32,6 +32,7 @@
 #include "fesapi/resqml2/DiscreteProperty.h"
 #include "fesapi/resqml2/SubRepresentation.h"
 
+
 #include <array>
 
 namespace geos
@@ -469,7 +470,109 @@ int readDiscreteOrCategoricalProperty( RESQML2_NS::AbstractValuesProperty * valu
 }
 
 
-vtkSmartPointer< vtkUnstructuredGrid >
+vtkSmartPointer< vtkDataSet >
+loadGridRepresentation(COMMON_NS::AbstractObject *rep )
+{
+  if(rep->getXmlTag() == RESQML2_NS::UnstructuredGridRepresentation::XML_TAG)
+  {
+    return loadUnstructuredGridRepresentation(static_cast<RESQML2_NS::UnstructuredGridRepresentation*>(rep));
+  }
+  else if(rep->getXmlTag() == RESQML2_NS::AbstractIjkGridRepresentation::XML_TAG)
+  {
+    return loadIjkGridRepresentation(static_cast<RESQML2_NS::AbstractIjkGridRepresentation*>(rep));
+  }
+
+  return vtkSmartPointer<vtkUnstructuredGrid>::New();
+}
+
+vtkSmartPointer< vtkDataSet >
+loadIjkGridRepresentation( RESQML2_NS::AbstractIjkGridRepresentation *grid )
+{
+  auto vtk_explicitStructuredGrid = vtkSmartPointer< vtkExplicitStructuredGrid >::New();
+
+  uint32_t iCellCount = grid->getICellCount();
+  uint32_t jCellCount = grid->getJCellCount();
+	uint32_t kCellCount = grid->getKCellCount();
+	uint64_t pointCount = grid->getXyzPointCountOfAllPatches();
+  uint32_t initKIndex = 0;
+	uint32_t maxKIndex = kCellCount;
+
+  int extent[6] = { 0, static_cast<int>(iCellCount), 0, static_cast<int>(jCellCount), static_cast<int>(initKIndex), static_cast<int>(maxKIndex) };
+  vtk_explicitStructuredGrid->SetExtent(extent);
+
+  //handle points
+  auto points = vtkSmartPointer<vtkPoints>::New();
+	points->SetNumberOfPoints(pointCount);
+	size_t point_id = 0;
+
+	std::unique_ptr<double[]> allXyzPoints(new double[pointCount * 3]);
+	grid->getXyzPointsOfAllPatchesInGlobalCrs(allXyzPoints.get());
+	const size_t coordCount = pointCount * 3;
+
+	const double zIndice = grid->getLocalCrs(0)->isDepthOriented() ? -1 : 1;
+	for (uint_fast64_t  pointIndex = 0; pointIndex < coordCount; pointIndex += 3)
+	{
+		points->SetPoint(point_id++, allXyzPoints[pointIndex], allXyzPoints[pointIndex + 1], -allXyzPoints[pointIndex + 2] * zIndice);
+	}	
+  vtk_explicitStructuredGrid->SetPoints(points);
+
+
+  // Check which cells have no geometry
+	const uint64_t cellCount = grid->getCellCount();
+	std::unique_ptr<bool[]> enabledCells(new bool[cellCount]);
+	if (grid->hasCellGeometryIsDefinedFlags())
+	{
+		grid->getCellGeometryIsDefinedFlags(enabledCells.get());
+	}
+	else
+	{
+		std::fill_n(enabledCells.get(), cellCount, true);
+	}
+
+  const uint64_t translatePoint = grid->getXyzPointCountOfKInterface() * initKIndex;
+
+  grid->loadSplitInformation();
+
+  uint64_t cellIndex = 0;
+	vtkSmartPointer<vtkIdList> nodes = vtkSmartPointer<vtkIdList>::New();
+	nodes->SetNumberOfIds(8);
+
+	for (uint_fast32_t vtkKCellIndex = initKIndex; vtkKCellIndex < maxKIndex; ++vtkKCellIndex)
+	{
+		for (uint_fast32_t vtkJCellIndex = 0; vtkJCellIndex < jCellCount; ++vtkJCellIndex)
+		{
+			for (uint_fast32_t vtkICellIndex = 0; vtkICellIndex < iCellCount; ++vtkICellIndex)
+			{
+				vtkIdType cellId = vtk_explicitStructuredGrid->ComputeCellId(vtkICellIndex, vtkJCellIndex, vtkKCellIndex);
+				if (enabledCells[cellIndex++])
+				{
+					vtkIdType* indice = vtk_explicitStructuredGrid->GetCellPoints(cellId);
+					indice[0] = grid->getXyzPointIndexFromCellCorner(vtkICellIndex, vtkJCellIndex, vtkKCellIndex, 0) - translatePoint;
+					indice[1] = grid->getXyzPointIndexFromCellCorner(vtkICellIndex, vtkJCellIndex, vtkKCellIndex, 1) - translatePoint;
+					indice[2] = grid->getXyzPointIndexFromCellCorner(vtkICellIndex, vtkJCellIndex, vtkKCellIndex, 2) - translatePoint;
+					indice[3] = grid->getXyzPointIndexFromCellCorner(vtkICellIndex, vtkJCellIndex, vtkKCellIndex, 3) - translatePoint;
+					indice[4] = grid->getXyzPointIndexFromCellCorner(vtkICellIndex, vtkJCellIndex, vtkKCellIndex, 4) - translatePoint;
+					indice[5] = grid->getXyzPointIndexFromCellCorner(vtkICellIndex, vtkJCellIndex, vtkKCellIndex, 5) - translatePoint;
+					indice[6] = grid->getXyzPointIndexFromCellCorner(vtkICellIndex, vtkJCellIndex, vtkKCellIndex, 6) - translatePoint;
+					indice[7] = grid->getXyzPointIndexFromCellCorner(vtkICellIndex, vtkJCellIndex, vtkKCellIndex, 7) - translatePoint;
+
+				}
+				else {
+					vtk_explicitStructuredGrid->BlankCell(cellId);
+				}
+			}
+		}
+	}
+
+	grid->unloadSplitInformation();
+
+	vtk_explicitStructuredGrid->CheckAndReorderFaces();
+	vtk_explicitStructuredGrid->ComputeFacesConnectivityFlagsArray();
+
+  return vtkDataSet::SafeDownCast(vtk_explicitStructuredGrid);
+}
+
+vtkSmartPointer< vtkDataSet >
 loadUnstructuredGridRepresentation( RESQML2_NS::UnstructuredGridRepresentation *grid )
 {
   auto vtk_unstructuredGrid = vtkSmartPointer< vtkUnstructuredGrid >::New();
@@ -592,7 +695,7 @@ loadUnstructuredGridRepresentation( RESQML2_NS::UnstructuredGridRepresentation *
 
   grid->unloadGeometry();
 
-  return vtk_unstructuredGrid;
+  return vtkDataSet::SafeDownCast(vtk_unstructuredGrid);
 }
 
 vtkSmartPointer< vtkDataSet >
@@ -626,6 +729,9 @@ loadProperty( vtkSmartPointer< vtkDataSet > dataset, RESQML2_NS::AbstractValuesP
 vtkSmartPointer< vtkDataSet >
 createRegions( vtkSmartPointer< vtkDataSet > dataset, std::vector< RESQML2_NS::SubRepresentation * > regions, string attributeName )
 {
+  if(regions.empty())
+    return dataset;
+
   int region_id = 0;
 
   vtkIntArray * arr = vtkIntArray::New();

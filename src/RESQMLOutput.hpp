@@ -78,11 +78,10 @@ public:
   {
     static constexpr auto plotFileName = "plotFileName";
     static constexpr auto plotLevel = "plotLevel";
-    static constexpr auto objectName = "objectName";
+    static constexpr auto referenceObjectName = "referenceObjectName";
     static constexpr auto onlyPlotSpecifiedFieldNames = "onlyPlotSpecifiedFieldNames";
     static constexpr auto fieldNames = "fieldNames";
-    static constexpr auto parentMeshUUID = "parentMeshUUID";
-    static constexpr auto parentMeshName = "parentMeshName";
+    static constexpr auto inputRepositoryName = "inputRepositoryName";    
   } RESQMLOutputViewKeys;
   /// @endcond
 
@@ -101,10 +100,10 @@ private:
   array1d< string > m_fieldNames;
 
   /// Name of the Mesh input node
-  string m_objectName;
+  string m_referenceObjectName;
 
   /// UUID of the parent grid
-  string m_parentMeshUUID;
+  string m_inputRepositoryName;
 
   // Name of the parent grid
   string m_parentMeshName;
