@@ -497,6 +497,23 @@ loadIjkGridRepresentation( RESQML2_NS::AbstractIjkGridRepresentation *grid )
   uint32_t initKIndex = 0;
 	uint32_t maxKIndex = kCellCount;
 
+
+  //check hyperslab capacity
+  bool isHyperslabed;
+  try
+	{
+    const auto kInterfaceNodeCount = grid->getXyzPointCountOfKInterface();
+    std::unique_ptr<double[]> allXyzPoints(new double[kInterfaceNodeCount * 3]);
+    grid->getXyzPointsOfKInterface(0, allXyzPoints.get());
+    isHyperslabed = true;
+	}
+	catch (const std::exception &)
+	{
+		isHyperslabed = false;
+	}
+
+  std::cout << "isHyperslabed :" << isHyperslabed  << std::endl;
+
   int extent[6] = { 0, static_cast<int>(iCellCount), 0, static_cast<int>(jCellCount), static_cast<int>(initKIndex), static_cast<int>(maxKIndex) };
   vtk_explicitStructuredGrid->SetExtent(extent);
 
@@ -512,7 +529,7 @@ loadIjkGridRepresentation( RESQML2_NS::AbstractIjkGridRepresentation *grid )
 	const double zIndice = grid->getLocalCrs(0)->isDepthOriented() ? -1 : 1;
 	for (uint_fast64_t  pointIndex = 0; pointIndex < coordCount; pointIndex += 3)
 	{
-		points->SetPoint(point_id++, allXyzPoints[pointIndex], allXyzPoints[pointIndex + 1], -allXyzPoints[pointIndex + 2] * zIndice);
+		points->SetPoint(point_id++, allXyzPoints[pointIndex], allXyzPoints[pointIndex + 1], allXyzPoints[pointIndex + 2] * zIndice);
 	}	
   vtk_explicitStructuredGrid->SetPoints(points);
 
