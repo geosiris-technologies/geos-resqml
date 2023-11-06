@@ -117,6 +117,9 @@ public:
    */
   void generateSubRepresentations( DomainPartition const & domain );
 
+  void enableCompression() const;
+
+
 private:
 
   /**

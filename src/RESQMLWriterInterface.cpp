@@ -278,8 +278,9 @@ void RESQMLWriterInterface::initializeOutput()
 
   EML2_NS::AbstractHdfProxy *m_hdfProxy = m_outputRepository->createHdfProxy(
     hdfProxy, "Parallel Hdf Proxy", m_outputDir, m_outputName + ".h5",
-    COMMON_NS::DataObjectRepository::openingMode::OVERWRITE );
+    COMMON_NS::DataObjectRepository::openingMode::OVERWRITE );  
   m_outputRepository->setDefaultHdfProxy( m_hdfProxy );
+
 
   // TODO need local3dCrs ?
   //  local3dCrs = repo.createLocalDepth3dCrs("", "Default local CRS", .0, .0,
@@ -287,6 +288,13 @@ void RESQMLWriterInterface::initializeOutput()
   //  gsoap_resqml2_0_1::eml20__LengthUom::m, "Unknown", false);
   //  repo.setDefaultCrs(local3dCrs);
 }
+
+void RESQMLWriterInterface::enableCompression() const
+{
+  m_outputRepository->getDefaultHdfProxy()->setCompressionLevel(5);
+  // m_outputRepository->getDefaultHdfProxy()->setMaxChunkSize(192/2); // Create two chunks
+}
+
 
 void RESQMLWriterInterface::generateOutput() const
 {

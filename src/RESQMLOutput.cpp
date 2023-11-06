@@ -119,6 +119,7 @@ bool RESQMLOutput::execute( real64 const time_n,
   if( cycleNumber == 0 )
   {
     m_writer.generateSubRepresentations( domain );
+    m_writer.enableCompression();
   }
 
   // if( cycleNumber == 0 )
