@@ -277,7 +277,7 @@ void RESQMLWriterInterface::initializeOutput()
   string hdfProxy = uuid::generate_uuid_v4();
   MpiWrapper::broadcast( hdfProxy, 0 );
 
-  m_outputRepository->setHdfProxyFactory(new MyHdfProxyMPIFactory());
+  m_outputRepository->setHdfProxyFactory(new common::MyHdfProxyMPIFactory());
   EML2_NS::AbstractHdfProxy *m_hdfProxy = m_outputRepository->createHdfProxy(
     hdfProxy, "Parallel Hdf Proxy", m_outputDir, m_outputName + ".h5",
     COMMON_NS::DataObjectRepository::openingMode::OVERWRITE );  

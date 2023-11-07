@@ -77,6 +77,17 @@ namespace EML2_NS
 
 		void close() final;
 
+		/**
+		 * Set the MPI communicator to use
+		*/
+		void setMPICommunicator(MPI_Comm communicator) { mpi_comm = communicator; }
+
+
+		DLL_IMPORT_OR_EXPORT static constexpr char const* XML_NS = "eml2";
+
+		std::string getXmlNamespace() const final { return XML_NS; }
+
+
 		COMMON_NS::AbstractObject::numericalDatatypeEnum getNumericalDatatype(const std::string& groupName) final;
 
 		int getHdfDatatypeClassInDataset(const std::string& datasetName) final;
@@ -389,5 +400,8 @@ namespace EML2_NS
 
 		/** Groups which are currently opened where key is their path and value is their identifier */
 		std::unordered_map< std::string, hdf5_hid_t > openedGroups;
+
+		/** An MPI communicator where each rank in the communicator will be accessing the target file. */
+        MPI_Comm mpi_comm = MPI_COMM_WORLD;
 	};
 }

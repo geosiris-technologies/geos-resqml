@@ -649,73 +649,73 @@ void MyHdfProxyMPI::writeArrayNd(const std::string & groupName,
 	}
 }
 
-void MyHdfProxyMPI::createArrayNd(
-	const std::string& groupName,
-	const std::string& datasetName, 
-	COMMON_NS::AbstractObject::numericalDatatypeEnum datatype,
-	const uint64_t* numValuesInEachDimension,
-	unsigned int numDimensions,
-	int rank)
-{
-	if (!isOpened()) {
-		open();
-	}
+// void MyHdfProxyMPI::createArrayNd(
+// 	const std::string& groupName,
+// 	const std::string& datasetName, 
+// 	COMMON_NS::AbstractObject::numericalDatatypeEnum datatype,
+// 	const uint64_t* numValuesInEachDimension,
+// 	unsigned int numDimensions,
+// 	int rank)
+// {
+// 	if (!isOpened()) {
+// 		open();
+// 	}
 
-	hid_t grp = openOrCreateGroup(groupName);
-	if (grp < 0) {
-		throw invalid_argument("The group " + groupName + " could not be created.");
-	}
+// 	hid_t grp = openOrCreateGroup(groupName);
+// 	if (grp < 0) {
+// 		throw invalid_argument("The group " + groupName + " could not be created.");
+// 	}
 
-    // dataspace
-	std::unique_ptr<hsize_t[]> max_dims = copyToHdf5Datatype(numValuesInEachDimension, numDimensions);
-	std::unique_ptr<hsize_t[]> globalDims; //multiple by
-    // hsize_t dims[3] = {Y, X};
-    hsize_t globalDims[3] = {Y * 4, X * 4};
-    hsize_t max_dims[2] = {Y * 4, X * 4};
-    hsize_t offset[2] = {rank/4 * Y, rank%4 * X};
+//     // dataspace
+// 	std::unique_ptr<hsize_t[]> max_dims = copyToHdf5Datatype(numValuesInEachDimension, numDimensions);
+// 	std::unique_ptr<hsize_t[]> globalDims; //multiple by
+//     // hsize_t dims[3] = {Y, X};
+//     hsize_t globalDims[3] = {Y * 4, X * 4};
+//     hsize_t max_dims[2] = {Y * 4, X * 4};
+//     hsize_t offset[2] = {rank/4 * Y, rank%4 * X};
 
 
-    // hid_t srcSize = H5Screate_simple(2, dims, nullptr);
-    hid_t filespace = H5Screate_simple(2, globalDims, max_dims);
+//     // hid_t srcSize = H5Screate_simple(2, dims, nullptr);
+//     hid_t filespace = H5Screate_simple(2, globalDims, max_dims);
 
-	printf("%i: %llu,%llu %llu,%llu \n", rank, offset[0],offset[1],globalDims[0],globalDims[1]);
+// 	printf("%i: %llu,%llu %llu,%llu \n", rank, offset[0],offset[1],globalDims[0],globalDims[1]);
 
-	// Create the dataset.
-	hid_t dataset;
-	const hid_t hdf5Datatype = convertToHdf5Datatype(datatype);
-	if (compressionLevel > 0) {
+// 	// Create the dataset.
+// 	hid_t dataset;
+// 	const hid_t hdf5Datatype = convertToHdf5Datatype(datatype);
+// 	if (compressionLevel > 0) {
 
-    	// chunking
-    	hsize_t chunk[2] = {128, 128};
-    	hid_t dcpl = H5Pcreate(H5P_DATASET_CREATE);
-		H5Pset_deflate (dcpl, compressionLevel);
-    	H5Pset_chunk(dcpl, 2, chunk);
+//     	// chunking
+//     	hsize_t chunk[2] = {128, 128};
+//     	hid_t dcpl = H5Pcreate(H5P_DATASET_CREATE);
+// 		H5Pset_deflate (dcpl, compressionLevel);
+//     	H5Pset_chunk(dcpl, 2, chunk);
 
-		// dataset
-		dataset = H5Dcreate(grp, datasetName.c_str(), hdf5Datatype, filespace, H5P_DEFAULT, dcpl, H5P_DEFAULT);
+// 		// dataset
+// 		dataset = H5Dcreate(grp, datasetName.c_str(), hdf5Datatype, filespace, H5P_DEFAULT, dcpl, H5P_DEFAULT);
 
-		H5Pclose(dcpl);
-		if (dataset < 0) {			
-			H5Sclose(filespace);
-			throw invalid_argument("The dataset " + datasetName + " could not be created.");
-		}
-	}
-	else
-	{
-		dataset = H5Dcreate(grp, datasetName.c_str(), hdf5Datatype, filespace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-		if (dataset < 0) {
-			H5Sclose(filespace);
-			throw invalid_argument("The dataset " + datasetName + " could not be created.");
-		}
-	}
+// 		H5Pclose(dcpl);
+// 		if (dataset < 0) {			
+// 			H5Sclose(filespace);
+// 			throw invalid_argument("The dataset " + datasetName + " could not be created.");
+// 		}
+// 	}
+// 	else
+// 	{
+// 		dataset = H5Dcreate(grp, datasetName.c_str(), hdf5Datatype, filespace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+// 		if (dataset < 0) {
+// 			H5Sclose(filespace);
+// 			throw invalid_argument("The dataset " + datasetName + " could not be created.");
+// 		}
+// 	}
 
-	if (H5Sclose(filespace) < 0) {
-		throw invalid_argument("Cannot close the dataspace for " + datasetName);
-	}
-	if (H5Dclose(dataset) < 0) {
-		throw invalid_argument("Cannot close the dataset " + datasetName);
-	}
-}
+// 	if (H5Sclose(filespace) < 0) {
+// 		throw invalid_argument("Cannot close the dataspace for " + datasetName);
+// 	}
+// 	if (H5Dclose(dataset) < 0) {
+// 		throw invalid_argument("Cannot close the dataset " + datasetName);
+// 	}
+// }
 
 void MyHdfProxyMPI::createArrayNd(
 	const std::string& groupName,
@@ -827,7 +827,7 @@ void MyHdfProxyMPI::writeArrayNdSlab(
 	}
 
     hid_t dset_plist_id = H5Pcreate(H5P_DATASET_XFER);
-    H5set_dxpl_mpio( dset_plist_id, H5FD_MPIO_COLLECTIVE);
+    H5Pset_dxpl_mpio( dset_plist_id, H5FD_MPIO_COLLECTIVE);
 
 
 	errorCode = H5Dwrite(dataset, hdf5Datatype, memspace, filespace, dset_plist_id, values);
