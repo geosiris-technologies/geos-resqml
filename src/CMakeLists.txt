@@ -32,6 +32,8 @@ set(componentHeaders
   ETPRepository.hpp
   Property.hpp
   Region.hpp
+  MyHdfProxyMPI.h
+  MyHdfProxyMPIFactory.h
 )
 
 #
@@ -47,6 +49,8 @@ set(componentSources
   ETPRepository.cpp
   Property.cpp
   Region.cpp
+  MyHdfProxyMPI.cpp
+  MyHdfProxyMPIFactory.cpp
 )
 
 #
