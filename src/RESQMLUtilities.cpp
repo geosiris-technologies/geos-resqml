@@ -455,7 +455,7 @@ int readDiscreteOrCategoricalProperty( RESQML2_NS::AbstractValuesProperty * valu
 
   int * valueIndices = new int[totalHDFElementcount]; // deleted by VTK cellData vtkSmartPointer
 
-  valuesProperty->getIntValuesOfPatch( 0, valueIndices );
+  valuesProperty->getInt32ValuesOfPatch( 0, valueIndices );
 
   //TODO handle NaN ?
 
