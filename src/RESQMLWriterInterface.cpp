@@ -280,7 +280,8 @@ void RESQMLWriterInterface::initializeOutput()
   m_outputRepository->setHdfProxyFactory(new COMMON_NS::HdfProxyMPIFactory());  
   EML2_NS::AbstractHdfProxy *m_hdfProxy = m_outputRepository->createHdfProxy(
     hdfProxy, "Parallel Hdf Proxy", m_outputDir, m_outputName + ".h5",
-    COMMON_NS::DataObjectRepository::openingMode::OVERWRITE );  
+    COMMON_NS::DataObjectRepository::openingMode::OVERWRITE );
+  m_hdfProxy->setCompressionLevel(5);
   dynamic_cast<EML2_0_NS::HdfProxyMPI*>(m_hdfProxy)->setCollectiveIO();
   m_outputRepository->setDefaultHdfProxy( m_hdfProxy );
 
