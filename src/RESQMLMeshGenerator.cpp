@@ -95,36 +95,36 @@ RESQMLMeshGenerator::RESQMLMeshGenerator( string const & name,
                     " If set to a positive value, the GlobalId arrays in the input mesh are used and required, and the simulation aborts if they are not available" );
 }
 
-Group * RESQMLMeshGenerator::createChild( string const & childKey, string const & childName )
-{
-  GEOS_LOG_RANK_0( "Adding Mesh related entities: " << childKey << ", " << childName );
-  if( childKey == groupKeyStruct::regionString() )
-  {
-    m_regions.emplace_back(childName);
-    return &registerGroup< Region >( childName );
-  }
-  else if( childKey == groupKeyStruct::propertyString())
-  {
-    m_properties.emplace_back(childName);
-    return &registerGroup< Property >( childName );
-  }
+// Group * RESQMLMeshGenerator::createChild( string const & childKey, string const & childName )
+// {
+//   GEOS_LOG_RANK_0( "Adding Mesh related entities: " << childKey << ", " << childName );
+//   if( childKey == groupKeyStruct::regionString() )
+//   {
+//     m_regions.emplace_back(childName);
+//     return &registerGroup< Region >( childName );
+//   }
+//   else if( childKey == groupKeyStruct::propertyString())
+//   {
+//     m_properties.emplace_back(childName);
+//     return &registerGroup< Property >( childName );
+//   }
   // else
   // {
   //    GEOS_THROW( "Unrecognized node: " << childKey, InputError );   
   // }
-  return nullptr;
-}
+//   return nullptr;
+// }
 
-void RESQMLMeshGenerator::expandObjectCatalogs()
-{
+// void RESQMLMeshGenerator::expandObjectCatalogs()
+// {
   // During schema generation, register one of each type derived from EnergyMLDataObjectBase here
   // for( auto & catalogIter: WellGeneratorBase::getCatalog())
   // {
   //   createChild( catalogIter.first, catalogIter.first );
   // }
-    createChild( groupKeyStruct::regionString(), groupKeyStruct::regionString() );
+//     createChild( groupKeyStruct::regionString(), groupKeyStruct::regionString() );
 
-}
+// }
 
 void RESQMLMeshGenerator::postProcessInput()
 {

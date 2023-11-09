@@ -29,8 +29,8 @@
 #include <vtkSmartPointer.h>
 #include <vtkSortDataArray.h>
 
-#include "MyHdfProxyMPIFactory.h"
-// #include "fesapi/eml2/AbstractHdfProxy.h"
+#include "fesapi/common/HdfProxyMPIFactory.h"
+#include "fesapi/eml2_0/HdfProxyMPI.h"
 #include "fesapi/eml2/TimeSeries.h"
 #include "fesapi/resqml2_0_1/PropertyKind.h"
 #include "fesapi/tools/TimeTools.h"
@@ -277,10 +277,11 @@ void RESQMLWriterInterface::initializeOutput()
   string hdfProxy = uuid::generate_uuid_v4();
   MpiWrapper::broadcast( hdfProxy, 0 );
 
-  m_outputRepository->setHdfProxyFactory(new common::MyHdfProxyMPIFactory());
+  m_outputRepository->setHdfProxyFactory(new COMMON_NS::HdfProxyMPIFactory());  
   EML2_NS::AbstractHdfProxy *m_hdfProxy = m_outputRepository->createHdfProxy(
     hdfProxy, "Parallel Hdf Proxy", m_outputDir, m_outputName + ".h5",
     COMMON_NS::DataObjectRepository::openingMode::OVERWRITE );  
+  dynamic_cast<EML2_0_NS::HdfProxyMPI*>(m_hdfProxy)->setCollectiveIO();
   m_outputRepository->setDefaultHdfProxy( m_hdfProxy );
 
 

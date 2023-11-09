@@ -57,9 +57,9 @@ public:
   static string catalogName() { return "RESQMLMesh"; }
 
 
-  Group * createChild( string const & childKey, string const & childName ) override;
+  //Group * createChild( string const & childKey, string const & childName ) override;
 
-  void expandObjectCatalogs() override;
+  //void expandObjectCatalogs() override;
 
 
   /**
