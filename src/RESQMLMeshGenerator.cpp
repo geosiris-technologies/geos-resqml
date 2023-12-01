@@ -95,25 +95,25 @@ RESQMLMeshGenerator::RESQMLMeshGenerator( string const & name,
                     " If set to a positive value, the GlobalId arrays in the input mesh are used and required, and the simulation aborts if they are not available" );
 }
 
-// Group * RESQMLMeshGenerator::createChild( string const & childKey, string const & childName )
-// {
-//   GEOS_LOG_RANK_0( "Adding Mesh related entities: " << childKey << ", " << childName );
-//   if( childKey == groupKeyStruct::regionString() )
-//   {
-//     m_regions.emplace_back(childName);
-//     return &registerGroup< Region >( childName );
-//   }
-//   else if( childKey == groupKeyStruct::propertyString())
-//   {
-//     m_properties.emplace_back(childName);
-//     return &registerGroup< Property >( childName );
-//   }
-  // else
-  // {
-  //    GEOS_THROW( "Unrecognized node: " << childKey, InputError );   
-  // }
-//   return nullptr;
-// }
+Group * RESQMLMeshGenerator::createChild( string const & childKey, string const & childName )
+{
+  GEOS_LOG_RANK_0( "Adding Mesh related entities: " << childKey << ", " << childName );
+  if( childKey == groupKeyStruct::regionString() )
+  {
+    m_regions.emplace_back(childName);
+    return &registerGroup< Region >( childName );
+  }
+  else if( childKey == groupKeyStruct::propertyString())
+  {
+    m_properties.emplace_back(childName);
+    return &registerGroup< Property >( childName );
+  }
+  else
+  {
+    ExternalMeshGeneratorBase::createChild(childKey, childName);
+  }
+  return nullptr;
+}
 
 // void RESQMLMeshGenerator::expandObjectCatalogs()
 // {
@@ -122,7 +122,8 @@ RESQMLMeshGenerator::RESQMLMeshGenerator( string const & name,
   // {
   //   createChild( catalogIter.first, catalogIter.first );
   // }
-//     createChild( groupKeyStruct::regionString(), groupKeyStruct::regionString() );
+
+  //  createChild( groupKeyStruct::regionString(), groupKeyStruct::regionString() );
 
 // }
 
@@ -402,16 +403,19 @@ RESQMLMeshGenerator::loadMesh()
 
     GEOS_LOG_LEVEL_RANK_0( 2, "  temporary write" );
 
-    vtkNew<vtkExplicitStructuredGridToUnstructuredGrid> ugConvertor;
-    ugConvertor->SetInputData(loadedMesh);
-    ugConvertor->Update();
 
+    if(loadedMesh->IsA("vtkExplicitStructuredGrid"))
+    {
+      vtkNew<vtkExplicitStructuredGridToUnstructuredGrid> ugConvertor;
+      ugConvertor->SetInputData(loadedMesh);
+      ugConvertor->Update();
 
-    vtkNew< vtkXMLUnstructuredGridWriter > writer;
-    writer->SetFileName( "tmp_output.vtu" );
-    writer->SetInputData( ugConvertor->GetOutput() );
-    writer->Write();
-
+      vtkNew< vtkXMLUnstructuredGridWriter > writer;
+      writer->SetFileName( "tmp_output.vtu" );
+      writer->SetInputData( ugConvertor->GetOutput() );
+      writer->Write();
+    }
+    
     return loadedMesh;
   }
   else
