@@ -49,8 +49,18 @@ COMMON_NS::AbstractObject* EnergyMLDataObjectRepository::getDataObject(string co
   return m_repository->getDataObjectByUuid( id );
 }
 
-COMMON_NS::AbstractObject* EnergyMLDataObjectRepository::getDataObjectByTitle(string const & GEOS_UNUSED_PARAM(name))
+COMMON_NS::AbstractObject* EnergyMLDataObjectRepository::getDataObjectByTitle(string const & name)
 {
+  for( auto& [key, value] : m_repository->getDataObjects())
+  {
+    //look at the different version of the dataObject
+    for (auto* dataObject : value) {
+		  if (dataObject->getTitle() == name ) {
+			  return dataObject;
+			}
+		}
+  }
+
   return nullptr;
 }
 

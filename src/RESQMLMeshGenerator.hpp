@@ -2,11 +2,8 @@
  * ------------------------------------------------------------------------------------------------------------
  * SPDX-License-Identifier: LGPL-2.1-only
  *
- * Copyright (c) 2018-2020 Lawrence Livermore National Security LLC
- * Copyright (c) 2018-2020 The Board of Trustees of the Leland Stanford Junior University
- * Copyright (c) 2018-2020 Total, S.A
- * Copyright (c) 2019-     GEOS Contributors
- * All rights reserved
+ * Copyright (c) 2018-2020 Lawrence Livermore National Security LLC Copyright (c) 2018-2020 The Board of Trustees of the Leland Stanford
+ *Junior University Copyright (c) 2018-2020 Total, S.A Copyright (c) 2019-     GEOS Contributors All rights reserved
  *
  * See top level LICENSE, COPYRIGHT, CONTRIBUTORS, NOTICE, and ACKNOWLEDGEMENTS files for details.
  * ------------------------------------------------------------------------------------------------------------
@@ -64,7 +61,7 @@ public:
 
   /**
    * @brief Generate the mesh using fesapi library
-   * 
+   *
    * @param[inout] cellBlockManager the CellBlockManager that will receive the meshing information
    * @param[in] partition the number of domain in each direction (x,y,z) for InternalMesh only, not used here
    * @details blabla
@@ -76,7 +73,7 @@ public:
                            string const & meshFieldName,
                            bool isMaterialField,
                            dataRepository::WrapperBase & wrapper ) const override;
-                           
+
   /**
    * @brief Free the memory of the temporary objects used to load the file.
    */
@@ -95,8 +92,7 @@ public:
 protected:
 
   /**
-   * @brief Deserializes the RESQML epc file into a Data Repository.
-   * This repository is then used to populate the vtk data structures.
+   * @brief Deserializes the RESQML epc file into a Data Repository. This repository is then used to populate the vtk data structures.
    */
   void postProcessInput() override;
 
@@ -107,10 +103,10 @@ private:
   {
     constexpr static char const * repositoryString() { return "repositoryName"; }
     constexpr static char const * uuidString() { return "uuid"; }
-    constexpr static char const * titleString() { return "title"; }    
+    constexpr static char const * titleString() { return "title"; }
     constexpr static char const * regionAttributeString() { return "regionAttribute"; }
     // constexpr static char const * uuidsFieldsToImportString() { return "UUIDsFieldsToImport"; }
-    // constexpr static char const * fieldsToImportString() { return "fieldsToImport"; }    
+    // constexpr static char const * fieldsToImportString() { return "fieldsToImport"; }
     // constexpr static char const * uuidsSurfacesToImportString() { return "UUIDsSurfacesToImport"; }
     constexpr static char const * nodesetNamesString() { return "nodesetNames"; }
     constexpr static char const * partitionRefinementString() { return "partitionRefinement"; }
@@ -122,6 +118,7 @@ private:
   {
     static constexpr char const * regionString() { return "Region"; }
     static constexpr char const * propertyString() { return "Property"; }
+    static constexpr char const * surfaceString() { return "Surface"; }
   };
   /// @endcond
 
@@ -129,49 +126,44 @@ private:
   /**
    * @brief Generate the mesh using fesapi library for reading RESQML data
    * @param[in] domain in the DomainPartition to be written
-   * @details This method leverages the fesapi library to load meshes into
-   * vtk data structures.
+   * @details This method leverages the fesapi library to load meshes into vtk data structures.
    */
   void generateMesh( DomainPartition & domain );
 
   /**
-   * @brief 
-   * 
-   * @param cellBlockName 
-   * @param meshFieldName 
-   * @param isMaterialField 
-   * @param wrapper 
+   * @brief
+   *
+   * @param cellBlockName
+   * @param meshFieldName
+   * @param isMaterialField
+   * @param wrapper
    */
   void importVolumicFieldOnArray( string const & cellBlockName, string const & meshFieldName, bool isMaterialField, WrapperBase & wrapper ) const;
 
 
   /**
-   * @brief Load a list of surfaces from fesapi into CellData of
-   * a vtkDataSet
+   * @brief Load a list of surfaces from fesapi into CellData of a vtkDataSet
    * @param[in] mesh The dataset in which load the surfaces
    * @return the dataset with the surfaces
    */
   vtkSmartPointer< vtkDataSet > loadSurfaces( vtkSmartPointer< vtkDataSet > mesh );
 
   /**
-   * @brief Load a list of regions from fesapi into CellData of
-   * a vtkDataSet
+   * @brief Load a list of regions from fesapi into CellData of a vtkDataSet
    * @param[in] mesh The dataset in which load the regions
    * @return the dataset with the regions
    */
   vtkSmartPointer< vtkDataSet > loadRegions( vtkSmartPointer< vtkDataSet > mesh );
 
   /**
-   * @brief Load a list of fields from fesapi into CellData of
-   * a vtkDataSet
+   * @brief Load a list of fields from fesapi into CellData of a vtkDataSet
    * @param[in] mesh The dataset in which load the fields
    * @return the dataset with the fields
    */
   vtkSmartPointer< vtkDataSet > loadProperties( vtkSmartPointer< vtkDataSet > mesh );
 
   /**
-   * @brief Looking for the UnstructuredGrid with fesapi and
-   * Load DataObject into a vtkDataSet
+   * @brief Looking for the UnstructuredGrid with fesapi and Load DataObject into a vtkDataSet
    * @return the loaded object into a dataset
    */
   vtkSmartPointer< vtkDataSet > retrieveUnstructuredGrid();
@@ -192,10 +184,10 @@ private:
   string m_title;
 
 
-  string_array m_regions;
-
+  string_array m_regions;    
+  string_array m_surfaces;
   string_array m_properties;
-  
+
   /**
    * @brief The VTK mesh to be imported into GEOS.
    * @note We keep this smart pointer as a member for use in @p importFields().

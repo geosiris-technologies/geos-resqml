@@ -2,11 +2,8 @@
  * ------------------------------------------------------------------------------------------------------------
  * SPDX-License-Identifier: LGPL-2.1-only
  *
- * Copyright (c) 2018-2020 Lawrence Livermore National Security LLC
- * Copyright (c) 2018-2020 The Board of Trustees of the Leland Stanford Junior University
- * Copyright (c) 2018-2020 Total, S.A
- * Copyright (c) 2019-     GEOSX Contributors
- * All rights reserved
+ * Copyright (c) 2018-2020 Lawrence Livermore National Security LLC Copyright (c) 2018-2020 The Board of Trustees of the Leland Stanford
+ *Junior University Copyright (c) 2018-2020 Total, S.A Copyright (c) 2019-     GEOSX Contributors All rights reserved
  *
  * See top level LICENSE, COPYRIGHT, CONTRIBUTORS, NOTICE, and ACKNOWLEDGEMENTS files for details.
  * ------------------------------------------------------------------------------------------------------------
@@ -34,6 +31,7 @@
 #include "EnergyMLDataObjectRepository.hpp"
 #include "Region.hpp"
 #include "Property.hpp"
+#include "Surface.hpp"
 
 #include <vtkBoundingBox.h>
 #include <vtkUnstructuredGrid.h>
@@ -56,10 +54,10 @@ using namespace dataRepository;
 RESQMLMeshGenerator::RESQMLMeshGenerator( string const & name,
                                           Group * const parent )
   : ExternalMeshGeneratorBase( name, parent ),
-  m_repository(nullptr)
+  m_repository( nullptr )
 {
-  registerWrapper( viewKeyStruct::repositoryString(), &m_objectName).
-    setInputFlag( InputFlags::REQUIRED).
+  registerWrapper( viewKeyStruct::repositoryString(), &m_objectName ).
+    setInputFlag( InputFlags::REQUIRED ).
     setDescription( "Name of the EnergyML Repository" );
 
   registerWrapper( viewKeyStruct::uuidString(), &m_uuid ).
@@ -100,30 +98,35 @@ Group * RESQMLMeshGenerator::createChild( string const & childKey, string const 
   GEOS_LOG_RANK_0( "Adding Mesh related entities: " << childKey << ", " << childName );
   if( childKey == groupKeyStruct::regionString() )
   {
-    m_regions.emplace_back(childName);
+    m_regions.emplace_back( childName );
     return &registerGroup< Region >( childName );
   }
   else if( childKey == groupKeyStruct::propertyString())
   {
-    m_properties.emplace_back(childName);
+    m_properties.emplace_back( childName );
     return &registerGroup< Property >( childName );
+  }
+  else if( childKey == groupKeyStruct::surfaceString())
+  {
+    m_surfaces.emplace_back(childName);
+    return &registerGroup< Surface >( childName );
   }
   else
   {
-    ExternalMeshGeneratorBase::createChild(childKey, childName);
+    ExternalMeshGeneratorBase::createChild( childKey, childName );
   }
   return nullptr;
 }
 
 // void RESQMLMeshGenerator::expandObjectCatalogs()
 // {
-  // During schema generation, register one of each type derived from EnergyMLDataObjectBase here
-  // for( auto & catalogIter: WellGeneratorBase::getCatalog())
-  // {
-  //   createChild( catalogIter.first, catalogIter.first );
-  // }
+// During schema generation, register one of each type derived from EnergyMLDataObjectBase here
+// for( auto & catalogIter: WellGeneratorBase::getCatalog())
+// {
+//   createChild( catalogIter.first, catalogIter.first );
+// }
 
-  //  createChild( groupKeyStruct::regionString(), groupKeyStruct::regionString() );
+//  createChild( groupKeyStruct::regionString(), groupKeyStruct::regionString() );
 
 // }
 
@@ -134,9 +137,9 @@ void RESQMLMeshGenerator::postProcessInput()
   m_repository = meshManager.getGroupPointer< EnergyMLDataObjectRepository >( m_objectName );
 
   GEOS_THROW_IF( m_repository == nullptr,
-                    getName() << ": EnergyML Data Object Repository not found: " << m_objectName,
-                    InputError );
-    
+                 getName() << ": EnergyML Data Object Repository not found: " << m_objectName,
+                 InputError );
+
 }
 
 void RESQMLMeshGenerator::fillCellBlockManager( CellBlockManager & cellBlockManager, array1d< int > const & )
@@ -183,10 +186,10 @@ void RESQMLMeshGenerator::fillCellBlockManager( CellBlockManager & cellBlockMana
 }
 
 void RESQMLMeshGenerator::importFieldOnArray( Block block,
-                                           string const & blockName,
-                                           string const & meshFieldName,
-                                           bool isMaterialField,
-                                           dataRepository::WrapperBase & wrapper ) const
+                                              string const & blockName,
+                                              string const & meshFieldName,
+                                              bool isMaterialField,
+                                              dataRepository::WrapperBase & wrapper ) const
 {
   GEOS_ASSERT_MSG( m_vtkMesh, "Must call generateMesh() before importFields()" );
 
@@ -212,86 +215,105 @@ void RESQMLMeshGenerator::freeResources()
 vtkSmartPointer< vtkDataSet >
 RESQMLMeshGenerator::loadSurfaces( vtkSmartPointer< vtkDataSet > mesh )
 {
-  //
-  std::vector< resqml2::SubRepresentation * > surfaces;
+  std::vector< RESQML2_NS::SubRepresentation * > surfaces;
 
-  if( !m_uuidsSurfacesToImport.empty())
+  for( const auto & s : m_surfaces )
   {
-    for( auto const & uuid : m_uuidsSurfacesToImport )
+    Surface const & surface = this->getGroup< Surface >( s );
+
+    GEOS_LOG(GEOS_FMT("{}", surface.getTitle()));
+
+    if( !surface.getUUID().empty())
     {
-      GEOS_LOG_RANK_0( GEOS_FMT( "{} '{}': reading surface {}", catalogName(), getName(), uuid ) );
+      GEOS_LOG_RANK_0( GEOS_FMT( "{} '{}': reading surface {}", catalogName(), getName(), surface.getUUID() ) );
 
-      // auto * subrep = m_repository->getDataObjectByUuid< resqml2::SubRepresentation >( uuid );
-      // if( subrep == nullptr )
-      //   GEOS_ERROR( GEOS_FMT( "There exists no such data object with uuid {}", uuid ) );
+      auto * subrep = m_repository->getData()->getDataObjectByUuid< RESQML2_NS::SubRepresentation >( surface.getUUID() );
+      if( subrep == nullptr )
+        GEOS_ERROR( GEOS_FMT( "There exists no such data object with uuid {}", surface.getUUID() ) );
 
-      // if( subrep->getElementKindOfPatch( 0, 0 ) != gsoap_eml2_3::eml23__IndexableElement::faces )
-      //   GEOS_ERROR( GEOS_FMT( "The subrep with UUID {} is not a surface", uuid ) );
+      if( subrep->getElementKindOfPatch( 0, 0 ) != gsoap_eml2_3::eml23__IndexableElement::faces)
+        GEOS_ERROR( GEOS_FMT( "There subrepresentation {} must be a surface", surface.getUUID() ) );
 
-      // surfaces.push_back( subrep );
+      surfaces.push_back( subrep );
+    }
+    else if( !surface.getTitle().empty())
+    {
+      auto searchSurface = [&]( string const & surface_name ) -> RESQML2_NS::SubRepresentation *
+      {
+        for( auto * subrep : m_repository->getData()->getSubRepresentationSet())
+        {
+          if( subrep->getElementKindOfPatch( 0, 0 ) == gsoap_eml2_3::eml23__IndexableElement::faces  &&
+              subrep->getTitle() == surface_name )
+          {
+            return subrep;
+          }
+        }
+
+        return nullptr;
+      };
+
+      auto * subrep = searchSurface( surface.getTitle() );
+      if( subrep == nullptr )
+        GEOS_ERROR( GEOS_FMT( "There exists no such data object with title {}", surface.getTitle() ) );
+
+      GEOS_LOG_RANK_0( GEOS_FMT( "{} '{}': reading surface {} - {}", catalogName(), getName(), subrep->getTitle(), subrep->getUuid() ) );
+      surfaces.push_back( subrep );
+
     }
   }
-  else
-  {
-    // auto subrepSet = m_repository->getSubRepresentationSet();
-    // for( auto *subrep : subrepSet )
-    // {
-    //   if( subrep->getElementKindOfPatch( 0, 0 ) == gsoap_eml2_3::eml23__IndexableElement::faces )
-    //   {
-    //     GEOS_LOG_RANK_0( GEOS_FMT( "{} '{}': reading surface {}", catalogName(), getName(), subrep->getUuid() ) );
-    //     surfaces.push_back( subrep );
-    //   }
-    // }
-  }
 
-  auto * meshWithSurfaces = createSurfaces( mesh, surfaces, m_attributeName );
+  mesh = createSurfaces( mesh, surfaces, m_attributeName );
 
-  return vtkDataSet::SafeDownCast( meshWithSurfaces );
+  return mesh;
 }
 
 vtkSmartPointer< vtkDataSet >
 RESQMLMeshGenerator::loadRegions( vtkSmartPointer< vtkDataSet > mesh )
 {
-  
   std::vector< RESQML2_NS::SubRepresentation * > regions;
 
-  for(const auto& region : m_regions)
+  for( const auto & r : m_regions )
   {
+    Region const & region = this->getGroup< Region >( r );
 
-    Region const & r = this->getGroup< Region >( region );
-
-    if( !r.getUUID().empty())
+    if( !region.getUUID().empty())
     {
-      // for( auto const & region_uuid : m_uuidsRegionsToImport )
-      // {
-        GEOS_LOG_RANK_0( GEOS_FMT( "{} '{}': reading region {}", catalogName(), getName(), r.getUUID() ) );
+      GEOS_LOG_RANK_0( GEOS_FMT( "{} '{}': reading region {}", catalogName(), getName(), region.getUUID() ) );
 
-        auto * subrep = m_repository->getData()->getDataObjectByUuid< RESQML2_NS::SubRepresentation >( r.getUUID() );
-        if( subrep == nullptr )
-          GEOS_ERROR( GEOS_FMT( "There exists no such data object with uuid {}", r.getUUID() ) );
+      auto * subrep = m_repository->getData()->getDataObjectByUuid< RESQML2_NS::SubRepresentation >( region.getUUID() );
+      if( subrep == nullptr )
+        GEOS_ERROR( GEOS_FMT( "There exists no such data object with uuid {}", region.getUUID() ) );
 
-        regions.push_back( subrep );
-      // }
+      if( subrep->getElementKindOfPatch( 0, 0 ) != gsoap_eml2_3::eml23__IndexableElement::cells)
+        GEOS_ERROR( GEOS_FMT( "There subrepresentation {} must index cells elements in the mesh", region.getUUID() ) );
+
+      regions.push_back( subrep );
     }
-    else
+    else if( !region.getTitle().empty())
     {
-      // auto subrepSet = m_repository->getSubRepresentationSet();
-      // for( auto *subrep : subrepSet )
-      // {
-      //   if( subrep->getElementKindOfPatch( 0, 0 ) == gsoap_eml2_3::eml23__IndexableElement::cells )
-      //   {
-      //     GEOS_LOG_RANK_0( GEOS_FMT( "{} '{}': reading region {}", catalogName(), getName(), subrep->getUuid() ) );
-      //     regions.push_back( subrep );
-      //   }
-      // }
+      auto searchRegion = [&]( string const & region_name ) -> RESQML2_NS::SubRepresentation *
+      {
+        for( auto * subrep : m_repository->getData()->getSubRepresentationSet())
+        {
+          if( subrep->getElementKindOfPatch( 0, 0 ) == gsoap_eml2_3::eml23__IndexableElement::cells  &&
+              subrep->getTitle() == region_name )
+          {
+            return subrep;
+          }
+        }
+
+        return nullptr;
+      };
+
+      auto * subrep = searchRegion( region.getTitle() );
+      if( subrep == nullptr )
+        GEOS_ERROR( GEOS_FMT( "There exists no such data object with title {}", region.getTitle() ) );
+
+      GEOS_LOG_RANK_0( GEOS_FMT( "{} '{}': reading region {} - {}", catalogName(), getName(), subrep->getTitle(), subrep->getUuid() ) );
+      regions.push_back( subrep );
+
     }
-    
   }
-
-  
-
-
-
 
   mesh = createRegions( mesh, regions, m_attributeName );
 
@@ -304,7 +326,7 @@ RESQMLMeshGenerator::loadProperties( vtkSmartPointer< vtkDataSet > mesh )
 {
   std::vector< RESQML2_NS::AbstractValuesProperty * > fields_list;
 
-  for(const auto& p : m_properties)
+  for( const auto & p : m_properties )
   {
 
     Property const & property = this->getGroup< Property >( p );
@@ -314,36 +336,34 @@ RESQMLMeshGenerator::loadProperties( vtkSmartPointer< vtkDataSet > mesh )
       if( prop == nullptr )
         GEOS_ERROR( GEOS_FMT( "There exists no such data object with uuid {} and title {}", property.getUUID() ) );
 
-      GEOS_LOG_RANK_0( GEOS_FMT( "{} '{}': reading property {} - {}", catalogName(), getName(), property.getUUID(), prop->getTitle() ) );
+      GEOS_LOG_RANK_0( GEOS_FMT( "{} '{}': reading property {} - {}", catalogName(), getName(), prop->getTitle(), prop->getUuid() ) );
 
       fields_list.push_back( prop );
-    
+
     }
-    else if( !this->m_fieldsToImport.empty())
+    else if( !property.getTitle().empty())
     {
-    // auto searchPropery = [&]( string const & field_name ) -> RESQML2_NS::AbstractValuesProperty *
-    // {
-      // for( auto * value_prop : m_repository->getDataObjects< RESQML2_NS::AbstractValuesProperty >())
-      // {
-      //   if( value_prop->getTitle() == field_name )
-      //   {
-      //     return value_prop;
-      //   }
-      // }
+      auto searchPropery = [&]( string const & field_name ) -> RESQML2_NS::AbstractValuesProperty *
+      {
+        for( auto * value_prop : m_repository->getData()->getDataObjects< RESQML2_NS::AbstractValuesProperty >())
+        {
+          if( value_prop->getTitle() == field_name )
+          {
+            return value_prop;
+          }
+        }
 
-    //   return nullptr;
-    // };
+        return nullptr;
+      };
 
-    // for( auto const & field_name : m_fieldsToImport )
-    // {
-    //   auto * prop = searchPropery( field_name );
-    //   if( prop == nullptr )
-    //     GEOS_ERROR( GEOS_FMT( "There exists no such data object with uuid {} and title {}", field_name ) );
+      auto * prop = searchPropery( property.getTitle() );
+      if( prop == nullptr )
+        GEOS_ERROR( GEOS_FMT( "There exists no such data object with title {}", property.getTitle() ) );
 
-    //   GEOS_LOG_RANK_0( GEOS_FMT( "{} '{}': reading property {} - {}", catalogName(), getName(), field_name, prop->getUuid() ) );
+      GEOS_LOG_RANK_0( GEOS_FMT( "{} '{}': reading property {} - {}", catalogName(), getName(), prop->getTitle(), prop->getUuid() ) );
 
-    //   fields_list.push_back( prop );
-    // }
+      fields_list.push_back( prop );
+
     }
   }
 
@@ -362,10 +382,10 @@ RESQMLMeshGenerator::retrieveUnstructuredGrid()
 {
   COMMON_NS::AbstractObject * rep{nullptr};
 
-  if(!m_uuid.empty())
-    rep = m_repository->getDataObject(m_uuid);
-  else if(!m_title.empty())
-    rep = m_repository->getDataObjectByTitle(m_title);
+  if( !m_uuid.empty())
+    rep = m_repository->getDataObject( m_uuid );
+  else if( !m_title.empty())
+    rep = m_repository->getDataObjectByTitle( m_title );
 
   if( rep == nullptr )
     GEOS_ERROR( GEOS_FMT( "There exists no such data object with uuid {} or title {} in the epc file", m_uuid, m_title ) );
@@ -395,19 +415,18 @@ RESQMLMeshGenerator::loadMesh()
     GEOS_LOG_LEVEL_RANK_0( 2, "  (fields) load the RESQML Properties into vtk attributes..." );
     loadedMesh = loadProperties( loadedMesh );
 
-    // GEOS_LOG_LEVEL_RANK_0( 2, "  (surfaces) load the RESQML subrepresentations into the vtk grid..." );
-    // loadedMesh = loadSurfaces( loadedMesh );
+    GEOS_LOG_LEVEL_RANK_0( 2, "  (surfaces) load the RESQML subrepresentations into the vtk grid..." );
+    loadedMesh = loadSurfaces( loadedMesh );
 
-    
     GEOS_LOG_LEVEL_RANK_0( 2, "  ... end" );
 
     GEOS_LOG_LEVEL_RANK_0( 2, "  temporary write" );
 
 
-    if(loadedMesh->IsA("vtkExplicitStructuredGrid"))
+    if( loadedMesh->IsA( "vtkExplicitStructuredGrid" ))
     {
-      vtkNew<vtkExplicitStructuredGridToUnstructuredGrid> ugConvertor;
-      ugConvertor->SetInputData(loadedMesh);
+      vtkNew< vtkExplicitStructuredGridToUnstructuredGrid > ugConvertor;
+      ugConvertor->SetInputData( loadedMesh );
       ugConvertor->Update();
 
       vtkNew< vtkXMLUnstructuredGridWriter > writer;
@@ -415,7 +434,14 @@ RESQMLMeshGenerator::loadMesh()
       writer->SetInputData( ugConvertor->GetOutput() );
       writer->Write();
     }
-    
+    else
+    {
+      vtkNew< vtkXMLUnstructuredGridWriter > writer;
+      writer->SetFileName( "tmp_output.vtu" );
+      writer->SetInputData( loadedMesh );
+      writer->Write();
+    }
+
     return loadedMesh;
   }
   else
@@ -430,9 +456,9 @@ std::tuple< string, string > RESQMLMeshGenerator::getParentRepresentation() cons
 }
 
 void RESQMLMeshGenerator::importVolumicFieldOnArray( string const & cellBlockName,
-                                                  string const & meshFieldName,
-                                                  bool isMaterialField,
-                                                  dataRepository::WrapperBase & wrapper ) const
+                                                     string const & meshFieldName,
+                                                     bool isMaterialField,
+                                                     dataRepository::WrapperBase & wrapper ) const
 {
   for( auto const & typeRegions : m_cellMap )
   {

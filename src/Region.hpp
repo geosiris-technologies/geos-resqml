@@ -58,6 +58,8 @@ public:
 
   const string& getUUID() const { return m_uuid; }
 
+  const string& getTitle() const { return m_title; }
+
 private:
 
   /// Keys appearing in XML

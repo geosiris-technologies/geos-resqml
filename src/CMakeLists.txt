@@ -32,6 +32,7 @@ set(componentHeaders
   ETPRepository.hpp
   Property.hpp
   Region.hpp
+  Surface.hpp
 )
 
 #
@@ -47,6 +48,7 @@ set(componentSources
   ETPRepository.cpp
   Property.cpp
   Region.cpp
+  Surface.cpp
 )
 
 #
