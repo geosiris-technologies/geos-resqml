@@ -812,7 +812,7 @@ createSurfaces( vtkSmartPointer< vtkDataSet > dataset, std::vector< std::pair<in
     std::unique_ptr< uint64_t[] > elementIndices( new uint64_t[subFaceCount] );
     surface->getElementIndicesOfPatch( 0, 0, elementIndices.get());
 
-    region_id += 1;
+    // region_id += 1;
     for( uint64_t subFaceIndex =0; subFaceIndex < subFaceCount; ++subFaceIndex )
     {
       uint64_t faceIndex = elementIndices[subFaceIndex];
