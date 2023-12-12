@@ -231,8 +231,8 @@ RESQMLMeshGenerator::loadSurfaces( vtkSmartPointer< vtkDataSet > mesh )
       if( subrep == nullptr )
         GEOS_ERROR( GEOS_FMT( "There exists no such data object with uuid {}", surface.getUUID() ) );
 
-      // if( subrep->getElementKindOfPatch( 0, 0 ) != gsoap_eml2_3::eml23__IndexableElement::faces)
-      //   GEOS_ERROR( GEOS_FMT( "There subrepresentation {} must be a surface", surface.getUUID() ) );
+      if( subrep->getElementKindOfPatch( 0, 0 ) != gsoap_eml2_3::eml23__IndexableElement::faces)
+        GEOS_ERROR( GEOS_FMT( "There subrepresentation {} must be a surface", surface.getUUID() ) );
 
       surfaces.push_back( std::make_pair( surface.getRegionId() , subrep) );
     }
@@ -242,7 +242,7 @@ RESQMLMeshGenerator::loadSurfaces( vtkSmartPointer< vtkDataSet > mesh )
       {
         for( auto * subrep : m_repository->getData()->getSubRepresentationSet())
         {
-          if( /*subrep->getElementKindOfPatch( 0, 0 ) == gsoap_eml2_3::eml23__IndexableElement::faces  && */
+          if( subrep->getElementKindOfPatch( 0, 0 ) == gsoap_eml2_3::eml23__IndexableElement::faces  &&
               subrep->getTitle() == surface_name )
           {
             return subrep;
