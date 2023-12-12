@@ -60,6 +60,8 @@ public:
 
   const string& getTitle() const { return m_title; }
 
+  integer getRegionId() const { return m_regionId; }
+
 private:
 
   /// Keys appearing in XML
@@ -67,10 +69,12 @@ private:
     /// Solver type key
     static constexpr char const *uuidString() { return "uuid"; }
     static constexpr char const *titleString() { return "title"; }
+    static constexpr char const *regionIdString() { return "regionId"; }
   };
 
   string m_uuid;
   string m_title;
+  integer m_regionId;
 };
 
 } // namespace geos

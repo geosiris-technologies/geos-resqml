@@ -30,6 +30,10 @@ Surface::Surface( string const & name,
   setInputFlags( InputFlags::OPTIONAL );
   enableLogLevelInput();
 
+  registerWrapper( viewKeyStruct::regionIdString(), &m_regionId ).
+    setInputFlag( InputFlags::REQUIRED ).
+    setDescription( "Region Id of the surface" );
+
   registerWrapper( viewKeyStruct::uuidString(), &m_uuid ).
     setInputFlag( InputFlags::OPTIONAL ).
     setDescription( "UUID of the data object" );

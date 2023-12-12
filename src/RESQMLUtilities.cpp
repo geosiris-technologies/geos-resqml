@@ -783,18 +783,20 @@ createRegions( vtkSmartPointer< vtkDataSet > dataset, std::vector< RESQML2_NS::S
 }
 
 vtkUnstructuredGrid *
-createSurfaces( vtkSmartPointer< vtkDataSet > dataset, std::vector< RESQML2_NS::SubRepresentation * > surfaces, string regionAttributeName )
+createSurfaces( vtkSmartPointer< vtkDataSet > dataset, std::vector< std::pair<integer, RESQML2_NS::SubRepresentation *> >& surfaces, string regionAttributeName )
 {
   vtkUnstructuredGrid * grid = vtkUnstructuredGrid::SafeDownCast( dataset );
 
   vtkCellData * cell_data = grid->GetCellData();
-  auto * region_ids = vtkIntArray::SafeDownCast( cell_data->GetAbstractArray( regionAttributeName.c_str()));
-  auto * min_max = region_ids->GetRange();
-  int region_id = min_max[1];
+  // auto * region_ids = vtkIntArray::SafeDownCast( cell_data->GetAbstractArray( regionAttributeName.c_str()));
+  // auto * min_max = region_ids->GetRange();
+  // int region_id = min_max[1];
 
   for( std::size_t i = 0; i < surfaces.size(); ++i )
   {
-    RESQML2_NS::SubRepresentation * surface = surfaces[i];
+    RESQML2_NS::SubRepresentation * surface = std::get<1>(surfaces[i]);
+
+    int region_id = std::get<0>(surfaces[i]);
 
     // FACES
     auto *supportingGrid = dynamic_cast< RESQML2_NS::UnstructuredGridRepresentation * >(surface->getSupportingRepresentation( 0 ));
