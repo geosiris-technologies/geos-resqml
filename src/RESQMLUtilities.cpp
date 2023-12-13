@@ -782,9 +782,12 @@ createRegions( vtkSmartPointer< vtkDataSet > dataset, std::vector< RESQML2_NS::S
   return dataset;
 }
 
-vtkUnstructuredGrid *
-createSurfaces( vtkSmartPointer< vtkDataSet > dataset, std::vector< std::pair<integer, RESQML2_NS::SubRepresentation *> >& surfaces, string regionAttributeName )
+vtkSmartPointer< vtkDataSet >
+createSurfaces( vtkSmartPointer< vtkDataSet > dataset, std::vector< std::pair<integer, RESQML2_NS::SubRepresentation *> > surfaces, string regionAttributeName )
 {
+  if(surfaces.empty())
+    return dataset;
+
   vtkUnstructuredGrid * grid = vtkUnstructuredGrid::SafeDownCast( dataset );
 
   vtkCellData * cell_data = grid->GetCellData();
@@ -861,7 +864,7 @@ createSurfaces( vtkSmartPointer< vtkDataSet > dataset, std::vector< std::pair<in
     }
   }
 
-  return grid;
+  return vtkDataSet::SafeDownCast(grid);
 }
 
 } // namespace geos

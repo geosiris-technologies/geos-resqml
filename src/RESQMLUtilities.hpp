@@ -93,8 +93,8 @@ createRegions( vtkSmartPointer< vtkDataSet > dataset, std::vector< RESQML2_NS::S
  * @param regionAttributeName The name of the region array name
  * @return The dataset with the loaded surfaces
  */
-vtkUnstructuredGrid *
-createSurfaces( vtkSmartPointer< vtkDataSet > dataset, std::vector< std::pair<integer, RESQML2_NS::SubRepresentation *> >& surfaces, string regionAttributeName );
+vtkSmartPointer< vtkDataSet >
+createSurfaces( vtkSmartPointer< vtkDataSet > dataset, std::vector< std::pair<integer, RESQML2_NS::SubRepresentation *> > surfaces, string regionAttributeName );
 
 
 } // namespace geos
