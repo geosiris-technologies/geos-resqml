@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: LGPL-2.1-only
  *
  * Copyright (c) 2018-2020 Lawrence Livermore National Security LLC Copyright (c) 2018-2020 The Board of Trustees of the Leland Stanford
- *Junior University Copyright (c) 2018-2020 Total, S.A Copyright (c) 2019-     GEOS Contributors All rights reserved
+ * Junior University Copyright (c) 2018-2020 Total, S.A Copyright (c) 2019-     GEOS Contributors All rights reserved
  *
  * See top level LICENSE, COPYRIGHT, CONTRIBUTORS, NOTICE, and ACKNOWLEDGEMENTS files for details.
  * ------------------------------------------------------------------------------------------------------------
@@ -21,6 +21,7 @@
 // #include "mesh/ElementType.hpp"
 #include "mesh/generators/ExternalMeshGeneratorBase.hpp"
 #include "mesh/generators/VTKUtilities.hpp"
+#include "mesh/mpiCommunications/SpatialPartition.hpp"
 // #include "mesh/FieldIdentifiers.hpp"
 #include <vtkDataSet.h>
 
@@ -66,7 +67,7 @@ public:
    * @param[in] partition the number of domain in each direction (x,y,z) for InternalMesh only, not used here
    * @details blabla
    */
-  void fillCellBlockManager( CellBlockManager & cellBlockManager, array1d< int > const & partition ) override;
+  void fillCellBlockManager( CellBlockManager & cellBlockManager, SpatialPartition & partition ) override;
 
   void importFieldOnArray( Block block,
                            string const & blockName,
@@ -86,15 +87,15 @@ public:
   std::tuple< string, string > getParentRepresentation() const;
 
 
-  const std::string& getTitle() const { return m_title; }
-  const std::string& getUuid() const { return m_uuid; }
+  const std::string & getTitle() const { return m_title; }
+  const std::string & getUuid() const { return m_uuid; }
 
 protected:
 
   /**
    * @brief Deserializes the RESQML epc file into a Data Repository. This repository is then used to populate the vtk data structures.
    */
-  void postProcessInput() override;
+  void postInputInitialization() override;
 
 private:
 
@@ -138,7 +139,7 @@ private:
    * @param isMaterialField
    * @param wrapper
    */
-  void importVolumicFieldOnArray( string const & cellBlockName, string const & meshFieldName, bool isMaterialField, WrapperBase & wrapper ) const;
+  void importVolumicFieldOnArray( string const & cellBlockName, string const & meshFieldName, bool isMaterialField, dataRepository::WrapperBase & wrapper ) const;
 
 
   /**
@@ -184,7 +185,7 @@ private:
   string m_title;
 
 
-  string_array m_regions;    
+  string_array m_regions;
   string_array m_surfaces;
   string_array m_properties;
 

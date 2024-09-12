@@ -25,7 +25,7 @@ using namespace dataRepository;
 Property::Property( string const & name,
                     Group * const parent )
   :
-  MeshBase( name, parent )
+  Group( name, parent )
 {
   setInputFlags( InputFlags::OPTIONAL );
   enableLogLevelInput();
@@ -39,9 +39,8 @@ Property::Property( string const & name,
     setDescription( "Title of the data object" );
 }
 
-void Property::postProcessInput()
-{
-}
+void Property::postInputInitialization()
+{}
 
 Property::CatalogInterface::CatalogType & Property::getCatalog()
 {
@@ -49,6 +48,6 @@ Property::CatalogInterface::CatalogType & Property::getCatalog()
   return catalog;
 }
 
-REGISTER_CATALOG_ENTRY( MeshBase, Property, string const &, Group * const )
+REGISTER_CATALOG_ENTRY( Group, Property, string const &, Group * const )
 
 } // namespace geos

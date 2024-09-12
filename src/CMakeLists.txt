@@ -5,7 +5,7 @@
 if(DEFINED FESAPI_DIR)
     message(STATUS "FESAPI_DIR = ${FESAPI_DIR}")
 
-    find_and_register(NAME FesapiCpp
+    find_and_import(NAME FesapiCpp
                  INCLUDE_DIRECTORIES ${FESAPI_DIR}/include
                  LIBRARY_DIRECTORIES ${FESAPI_DIR}/lib
                  HEADER fesapi/nsDefinitions.h
@@ -57,13 +57,13 @@ set(componentSources
 # set(dependencyList mesh)
 set(dependencyList FesapiCpp)
 
-if(GEOSX_BUILD_SHARED_LIBS)
-  set(dependencyList ${dependencyList} geosx_core)
-else()
-  set(dependencyList ${dependencyList} ${geosx_core_libs})
-endif()
+# if(GEOSX_BUILD_SHARED_LIBS)
+set(dependencyList ${dependencyList} geosx_core)
+# else()
+#   set(dependencyList ${dependencyList} ${geosx_core_libs})
+# endif()
 
-message("adding RESQML library")
+message("adding RESQML library:")
 
 blt_add_library(NAME resqml
   SOURCES ${componentSources}

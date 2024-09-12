@@ -19,9 +19,10 @@
 #ifndef GEOS_EXTERNALCOMPONENTS_RESQML_REGION_HPP
 #define GEOS_EXTERNALCOMPONENTS_RESQML_REGION_HPP
 
-#include "mesh/MeshBase.hpp"
+#include "dataRepository/Group.hpp"
 
-namespace geos {
+namespace geos
+{
 
 /**
  * @brief Region parameters with Group capabilities
@@ -31,15 +32,16 @@ namespace geos {
  *
  */
 
-class Region : public MeshBase {
+class Region : public dataRepository::Group
+{
 public:
   Region() = delete;
 
   /// Constructor
-  Region(string const &name, Group *const parent);
+  Region( string const & name, Group * const parent );
 
   /// Copy constructor
-  Region(Region &&) = default;
+  Region( Region && ) = default;
 
   /**
    * @brief Accessor for the singleton Catalog object
@@ -54,16 +56,17 @@ public:
   static string catalogName() { return "Region"; }
 
   /// Postprocessing of input
-  virtual void postProcessInput() override;
+  virtual void postInputInitialization() override;
 
-  const string& getUUID() const { return m_uuid; }
+  const string & getUUID() const { return m_uuid; }
 
-  const string& getTitle() const { return m_title; }
+  const string & getTitle() const { return m_title; }
 
 private:
 
   /// Keys appearing in XML
-  struct viewKeyStruct {
+  struct viewKeyStruct
+  {
     /// Solver type key
     static constexpr char const *uuidString() { return "uuid"; }
     static constexpr char const *titleString() { return "title"; }

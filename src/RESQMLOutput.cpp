@@ -61,7 +61,7 @@ RESQMLOutput::RESQMLOutput( string const & name,
   registerWrapper( viewKeysStruct::inputRepositoryName, &m_inputRepositoryName ).
     setInputFlag( InputFlags::OPTIONAL ).
     setDescription( "The name of the input Data Object Repository from which to retrieve data." );
-    
+
   registerWrapper( viewKeysStruct::referenceObjectName, &m_referenceObjectName ).
     setInputFlag( InputFlags::OPTIONAL ).
     setDescription( "The name of the object from which to retrieve field values." );
@@ -71,7 +71,7 @@ RESQMLOutput::RESQMLOutput( string const & name,
 RESQMLOutput::~RESQMLOutput()
 {}
 
-void RESQMLOutput::postProcessInput()
+void RESQMLOutput::postInputInitialization()
 {
   m_writer.setOutputLocation( getOutputDirectory(), m_plotFileName );
   m_writer.setFieldNames( m_fieldNames.toViewConst() );
@@ -84,23 +84,23 @@ void RESQMLOutput::postProcessInput()
   // {
   //   m_writer.setParentRepresentation( { m_parentMeshUUID, m_parentMeshName } );
   // }
-  if(!m_referenceObjectName.empty())// or search for a RESQML input grid in the simulation deck to fill the blanks
+  if( !m_referenceObjectName.empty())// or search for a RESQML input grid in the simulation deck to fill the blanks
   {
     MeshManager & meshManager = this->getGroupByPath< MeshManager >( "/Problem/Mesh" );
     RESQMLMeshGenerator * resqmlMeshGenerator = meshManager.getGroupPointer< RESQMLMeshGenerator >( m_referenceObjectName );
 
     GEOS_THROW_IF( resqmlMeshGenerator == nullptr,
-                    getName() << ": RESQMLMesh not found: " << m_referenceObjectName,
-                    InputError );
-    
-    m_writer.setParentRepresentation( {resqmlMeshGenerator->getUuid(), resqmlMeshGenerator->getTitle() });
+                   getName() << ": RESQMLMesh not found: " << m_referenceObjectName,
+                   InputError );
+
+    m_writer.setParentRepresentation( {resqmlMeshGenerator->getUuid(), resqmlMeshGenerator->getTitle() } );
   }
   else
   {
-    GEOS_THROW(GEOS_FMT("{}: You must provide either a RESQMLMesh name or the parent grid Name and UUID", getName() ),
-                    InputError );
+    GEOS_THROW( GEOS_FMT( "{}: You must provide either a RESQMLMesh name or the parent grid Name and UUID", getName() ),
+                InputError );
   }
-  
+
   m_writer.initializeOutput();
 }
 
@@ -118,12 +118,12 @@ bool RESQMLOutput::execute( real64 const time_n,
 {
   if( cycleNumber == 0 )
   {
-    m_writer.generateSubRepresentations( domain );    
+    m_writer.generateSubRepresentations( domain );
   }
 
   // if( cycleNumber == 0 )
   // {
-    m_writer.write( time_n, cycleNumber, domain );
+  m_writer.write( time_n, cycleNumber, domain );
   // }
 
   return false;

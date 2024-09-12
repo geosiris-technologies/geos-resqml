@@ -19,9 +19,10 @@
 #ifndef GEOS_EXTERNALCOMPONENTS_RESQML_SURFACE_HPP
 #define GEOS_EXTERNALCOMPONENTS_RESQML_SURFACE_HPP
 
-#include "mesh/MeshBase.hpp"
+#include "dataRepository/Group.hpp"
 
-namespace geos {
+namespace geos
+{
 
 /**
  * @brief Surface parameters with Group capabilities
@@ -31,15 +32,16 @@ namespace geos {
  *
  */
 
-class Surface : public MeshBase {
+class Surface : public dataRepository::Group
+{
 public:
   Surface() = delete;
 
   /// Constructor
-  Surface(string const &name, Group *const parent);
+  Surface( string const & name, Group * const parent );
 
   /// Copy constructor
-  Surface(Surface &&) = default;
+  Surface( Surface && ) = default;
 
   /**
    * @brief Accessor for the singleton Catalog object
@@ -54,18 +56,19 @@ public:
   static string catalogName() { return "Surface"; }
 
   /// Postprocessing of input
-  virtual void postProcessInput() override;
+  virtual void postInputInitialization() override;
 
-  const string& getUUID() const { return m_uuid; }
+  const string & getUUID() const { return m_uuid; }
 
-  const string& getTitle() const { return m_title; }
+  const string & getTitle() const { return m_title; }
 
   integer getRegionId() const { return m_regionId; }
 
 private:
 
   /// Keys appearing in XML
-  struct viewKeyStruct {
+  struct viewKeyStruct
+  {
     /// Solver type key
     static constexpr char const *uuidString() { return "uuid"; }
     static constexpr char const *titleString() { return "title"; }

@@ -16,7 +16,7 @@
 #define GEOS_EXTERNALCOMPONENTS_RESQML_RESQMLWRITERINTERFACE_HPP_
 
 #include "fileIO/vtk/VTKPolyDataWriterInterface.hpp"
-#include "dataRepository/Group.hpp"
+
 
 #include "fesapi/common/EpcDocument.h"
 #include "fesapi/common/DataObjectRepository.h"

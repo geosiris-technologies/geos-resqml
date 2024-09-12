@@ -19,7 +19,7 @@ public:
    */
   ETPRepository( const string & name,
                  Group * const parent );
-    
+
 
 protected:
 
@@ -32,20 +32,20 @@ protected:
   };
   /// @endcond
 
-  void postProcessInput() override;
+  void postInputInitialization() override;
 
 private:
-    /// ETP Session
-    // std::shared_ptr<ETP_NS::PlainClientSession> m_session;
+  /// ETP Session
+  // std::shared_ptr<ETP_NS::PlainClientSession> m_session;
 
-    ///
-    string m_ipConnection;
+  ///
+  string m_ipConnection;
 
-    ///
-    integer m_portConnection;
+  ///
+  integer m_portConnection;
 
-    ///
-    string m_authConnection;
+  ///
+  string m_authConnection;
 };
 
 } // end namespace geosx

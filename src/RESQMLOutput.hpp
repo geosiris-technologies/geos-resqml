@@ -45,7 +45,7 @@ public:
   static string catalogName() { return "RESQML"; }
 
 
-  virtual void postProcessInput() override;
+  virtual void postInputInitialization() override;
 
   /**
    * @brief Writes out a set of properties.
@@ -81,7 +81,7 @@ public:
     static constexpr auto referenceObjectName = "referenceObjectName";
     static constexpr auto onlyPlotSpecifiedFieldNames = "onlyPlotSpecifiedFieldNames";
     static constexpr auto fieldNames = "fieldNames";
-    static constexpr auto inputRepositoryName = "inputRepositoryName";    
+    static constexpr auto inputRepositoryName = "inputRepositoryName";
   } RESQMLOutputViewKeys;
   /// @endcond
 

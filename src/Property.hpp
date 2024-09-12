@@ -19,9 +19,10 @@
 #ifndef GEOS_EXTERNALCOMPONENTS_RESQML_PROPERTY_HPP
 #define GEOS_EXTERNALCOMPONENTS_RESQML_PROPERTY_HPP
 
-#include "mesh/MeshBase.hpp"
+#include "dataRepository/Group.hpp"
 
-namespace geos {
+namespace geos
+{
 
 /**
  * @brief Linear solver parameters with Group capabilities
@@ -30,16 +31,17 @@ namespace geos {
  * dataRepository::Group capabilities to allow for XML input.
  */
 
-class Property : public MeshBase {
+class Property : public dataRepository::Group
+{
 public:
   Property() = delete;
 
   /// Constructor
-  Property(string const &name, Group *const parent);
+  Property( string const & name, Group * const parent );
 
   /// Copy constructor
-  Property(Property &&) = default;
-  
+  Property( Property && ) = default;
+
   /**
    * @brief Accessor for the singleton Catalog object
    * @return a static reference to the Catalog object
@@ -53,11 +55,11 @@ public:
   static string catalogName() { return "Property"; }
 
   /// Postprocessing of input
-  virtual void postProcessInput() override;
+  virtual void postInputInitialization() override;
 
-  const string& getUUID() const { return m_uuid; }
+  const string & getUUID() const { return m_uuid; }
 
-  const string& getTitle() const { return m_title; }
+  const string & getTitle() const { return m_title; }
 
   //   LinearSolverParameters const & get() const
   //   { return m_parameters; }
@@ -66,7 +68,8 @@ public:
   //   { return m_parameters; }
 
   /// Keys appearing in XML
-  struct viewKeyStruct {
+  struct viewKeyStruct
+  {
     /// Solver type key
     static constexpr char const *uuidString() { return "uuid"; }
     static constexpr char const *titleString() { return "title"; }

@@ -23,9 +23,9 @@ namespace geos
 using namespace dataRepository;
 
 Region::Region( string const & name,
-                    Group * const parent )
+                Group * const parent )
   :
-  MeshBase( name, parent )
+  Group( name, parent )
 {
   setInputFlags( InputFlags::OPTIONAL );
   enableLogLevelInput();
@@ -39,9 +39,9 @@ Region::Region( string const & name,
     setDescription( "Title of the data object" );
 }
 
-void Region::postProcessInput()
+void Region::postInputInitialization()
 {
-  //test region->getElementKindOfPatch( 0, 0 ) != gsoap_eml2_3::eml23__IndexableElement::faces  
+  //test region->getElementKindOfPatch( 0, 0 ) != gsoap_eml2_3::eml23__IndexableElement::faces
 }
 
 
@@ -51,6 +51,6 @@ Region::CatalogInterface::CatalogType & Region::getCatalog()
   return catalog;
 }
 
-REGISTER_CATALOG_ENTRY( MeshBase, Region, string const &, Group * const )
+REGISTER_CATALOG_ENTRY( Group, Region, string const &, Group * const )
 
 } // namespace geos

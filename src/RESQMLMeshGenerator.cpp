@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: LGPL-2.1-only
  *
  * Copyright (c) 2018-2020 Lawrence Livermore National Security LLC Copyright (c) 2018-2020 The Board of Trustees of the Leland Stanford
- *Junior University Copyright (c) 2018-2020 Total, S.A Copyright (c) 2019-     GEOSX Contributors All rights reserved
+ * Junior University Copyright (c) 2018-2020 Total, S.A Copyright (c) 2019-     GEOSX Contributors All rights reserved
  *
  * See top level LICENSE, COPYRIGHT, CONTRIBUTORS, NOTICE, and ACKNOWLEDGEMENTS files for details.
  * ------------------------------------------------------------------------------------------------------------
@@ -108,7 +108,7 @@ Group * RESQMLMeshGenerator::createChild( string const & childKey, string const 
   }
   else if( childKey == groupKeyStruct::surfaceString())
   {
-    m_surfaces.emplace_back(childName);
+    m_surfaces.emplace_back( childName );
     return &registerGroup< Surface >( childName );
   }
   else
@@ -130,7 +130,7 @@ Group * RESQMLMeshGenerator::createChild( string const & childKey, string const 
 
 // }
 
-void RESQMLMeshGenerator::postProcessInput()
+void RESQMLMeshGenerator::postInputInitialization()
 {
   MeshManager & meshManager = this->getGroupByPath< MeshManager >( "/Problem/Mesh" );
   // objectRepository.
@@ -142,11 +142,11 @@ void RESQMLMeshGenerator::postProcessInput()
 
 }
 
-void RESQMLMeshGenerator::fillCellBlockManager( CellBlockManager & cellBlockManager, array1d< int > const & )
+void RESQMLMeshGenerator::fillCellBlockManager( CellBlockManager & cellBlockManager, SpatialPartition & partition )
 {
   GEOS_MARK_FUNCTION;
 
-  MPI_Comm const comm = MPI_COMM_GEOSX;
+  MPI_Comm const comm = MPI_COMM_GEOS;
   vtkSmartPointer< vtkMultiProcessController > controller = vtk::getController();
   vtkMultiProcessController::SetGlobalController( controller );
 
@@ -154,12 +154,15 @@ void RESQMLMeshGenerator::fillCellBlockManager( CellBlockManager & cellBlockMana
   {
     GEOS_LOG_LEVEL_RANK_0( 2, "  reading the dataset..." );
     vtkSmartPointer< vtkDataSet > loadedMesh = loadMesh( );
+
     GEOS_LOG_LEVEL_RANK_0( 2, "  redistributing mesh..." );
-    m_vtkMesh = vtk::redistributeMesh( loadedMesh, comm, m_partitionMethod, m_partitionRefinement, m_useGlobalIds );
+    std::map< string, vtkSmartPointer< vtkDataSet > > empty{};
+    vtk::AllMeshes redistributedMeshes = vtk::redistributeMeshes( getLogLevel(), loadedMesh, empty, comm, m_partitionMethod, m_partitionRefinement, m_useGlobalIds );
+    m_vtkMesh = redistributedMeshes.getMainMesh();
     GEOS_LOG_LEVEL_RANK_0( 2, "  finding neighbor ranks..." );
     std::vector< vtkBoundingBox > boxes = vtk::exchangeBoundingBoxes( *m_vtkMesh, comm );
     std::vector< int > const neighbors = vtk::findNeighborRanks( std::move( boxes ) );
-    m_spatialPartition.setMetisNeighborList( std::move( neighbors ));
+    partition.setMetisNeighborList( std::move( neighbors ));
     GEOS_LOG_LEVEL_RANK_0( 2, "  done!" );
   }
 
@@ -215,13 +218,13 @@ void RESQMLMeshGenerator::freeResources()
 vtkSmartPointer< vtkDataSet >
 RESQMLMeshGenerator::loadSurfaces( vtkSmartPointer< vtkDataSet > mesh )
 {
-  std::vector< std::pair<integer, RESQML2_NS::SubRepresentation *> > surfaces;
+  std::vector< std::pair< integer, RESQML2_NS::SubRepresentation * > > surfaces;
 
   for( const auto & s : m_surfaces )
   {
     Surface const & surface = this->getGroup< Surface >( s );
 
-    GEOS_LOG(GEOS_FMT("{}", surface.getTitle()));
+    GEOS_LOG( GEOS_FMT( "{}", surface.getTitle()));
 
     if( !surface.getUUID().empty())
     {
@@ -231,10 +234,10 @@ RESQMLMeshGenerator::loadSurfaces( vtkSmartPointer< vtkDataSet > mesh )
       if( subrep == nullptr )
         GEOS_ERROR( GEOS_FMT( "There exists no such data object with uuid {}", surface.getUUID() ) );
 
-      if( subrep->getElementKindOfPatch( 0, 0 ) != gsoap_eml2_3::eml23__IndexableElement::faces)
+      if( subrep->getElementKindOfPatch( 0, 0 ) != gsoap_eml2_3::eml23__IndexableElement::faces )
         GEOS_ERROR( GEOS_FMT( "There subrepresentation {} must be a surface", surface.getUUID() ) );
 
-      surfaces.push_back( std::make_pair( surface.getRegionId() , subrep) );
+      surfaces.push_back( std::make_pair( surface.getRegionId(), subrep ) );
     }
     else if( !surface.getTitle().empty())
     {
@@ -257,7 +260,7 @@ RESQMLMeshGenerator::loadSurfaces( vtkSmartPointer< vtkDataSet > mesh )
         GEOS_ERROR( GEOS_FMT( "There exists no such data object with title {}", surface.getTitle() ) );
 
       GEOS_LOG_RANK_0( GEOS_FMT( "{} '{}': reading surface {} - {}", catalogName(), getName(), subrep->getTitle(), subrep->getUuid() ) );
-      surfaces.push_back( std::make_pair( surface.getRegionId(), subrep) );
+      surfaces.push_back( std::make_pair( surface.getRegionId(), subrep ) );
 
     }
   }
@@ -284,7 +287,7 @@ RESQMLMeshGenerator::loadRegions( vtkSmartPointer< vtkDataSet > mesh )
       if( subrep == nullptr )
         GEOS_ERROR( GEOS_FMT( "There exists no such data object with uuid {}", region.getUUID() ) );
 
-      if( subrep->getElementKindOfPatch( 0, 0 ) != gsoap_eml2_3::eml23__IndexableElement::cells)
+      if( subrep->getElementKindOfPatch( 0, 0 ) != gsoap_eml2_3::eml23__IndexableElement::cells )
         GEOS_ERROR( GEOS_FMT( "There subrepresentation {} must index cells elements in the mesh", region.getUUID() ) );
 
       regions.push_back( subrep );
@@ -488,6 +491,6 @@ void RESQMLMeshGenerator::importVolumicFieldOnArray( string const & cellBlockNam
   GEOS_ERROR( "Could not import field \"" << meshFieldName << "\" from cell block \"" << cellBlockName << "\"." );
 }
 
-REGISTER_CATALOG_ENTRY( MeshBase, RESQMLMeshGenerator, string const &, Group * const )
+REGISTER_CATALOG_ENTRY( MeshGeneratorBase, RESQMLMeshGenerator, string const &, Group * const )
 
 } // namespace geos

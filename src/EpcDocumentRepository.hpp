@@ -18,9 +18,9 @@ public:
    * @param[in] parent the parent Group pointer
    */
   explicit EpcDocumentRepository( const string & name,
-                         Group * const parent );
+                                  Group * const parent );
 
- 
+
   /**
    * @brief Return the name of the RESQMLDataObjectRepository in object catalog.
    * @return string that contains the catalog name of the RESQMLDataObjectRepository
@@ -29,9 +29,10 @@ public:
 
   string getCatalogName() override { return catalogName(); }
 
+  void open() override;
 
 protected:
-  
+
   ///@cond DO_NOT_DOCUMENT
   struct viewKeyStruct
   {
@@ -39,7 +40,7 @@ protected:
   };
   /// @endcond
 
-  void postProcessInput() override;
+  void postInputInitialization() override;
 
 private:
   /// Path to the epc file

@@ -23,9 +23,9 @@ namespace geos
 using namespace dataRepository;
 
 Surface::Surface( string const & name,
-                    Group * const parent )
+                  Group * const parent )
   :
-  MeshBase( name, parent )
+  Group( name, parent )
 {
   setInputFlags( InputFlags::OPTIONAL );
   enableLogLevelInput();
@@ -43,9 +43,9 @@ Surface::Surface( string const & name,
     setDescription( "Title of the data object" );
 }
 
-void Surface::postProcessInput()
+void Surface::postInputInitialization()
 {
-  //test region->getElementKindOfPatch( 0, 0 ) != gsoap_eml2_3::eml23__IndexableElement::faces  
+  //test region->getElementKindOfPatch( 0, 0 ) != gsoap_eml2_3::eml23__IndexableElement::faces
 }
 
 
@@ -55,6 +55,6 @@ Surface::CatalogInterface::CatalogType & Surface::getCatalog()
   return catalog;
 }
 
-REGISTER_CATALOG_ENTRY( MeshBase, Surface, string const &, Group * const )
+REGISTER_CATALOG_ENTRY( Group, Surface, string const &, Group * const )
 
 } // namespace geos

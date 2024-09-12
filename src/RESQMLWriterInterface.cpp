@@ -15,11 +15,11 @@
 // Source includes
 #include "RESQMLWriterInterface.hpp"
 
-#include "common/Logger.hpp"
+#include "common/logger/Logger.hpp"
 #include "common/TypeDispatch.hpp"
 #include "dataRepository/Group.hpp"
-#include "fileIO/Outputs/OutputUtilities.hpp"
 #include "mesh/DomainPartition.hpp"
+#include "fileIO/Outputs/OutputUtilities.hpp"
 
 #include <vtkDoubleArray.h>
 #include <vtkIdTypeArray.h>
@@ -277,12 +277,12 @@ void RESQMLWriterInterface::initializeOutput()
   string hdfProxy = uuid::generate_uuid_v4();
   MpiWrapper::broadcast( hdfProxy, 0 );
 
-  m_outputRepository->setHdfProxyFactory(new COMMON_NS::HdfProxyMPIFactory());  
+  m_outputRepository->setHdfProxyFactory( new COMMON_NS::HdfProxyMPIFactory());
   EML2_NS::AbstractHdfProxy *m_hdfProxy = m_outputRepository->createHdfProxy(
     hdfProxy, "Parallel Hdf Proxy", m_outputDir, m_outputName + ".h5",
     COMMON_NS::DataObjectRepository::openingMode::OVERWRITE );
-  m_hdfProxy->setCompressionLevel(5);
-  dynamic_cast<EML2_0_NS::HdfProxyMPI*>(m_hdfProxy)->setCollectiveIO();
+  m_hdfProxy->setCompressionLevel( 5 );
+  dynamic_cast< EML2_0_NS::HdfProxyMPI * >(m_hdfProxy)->setCollectiveIO();
   m_outputRepository->setDefaultHdfProxy( m_hdfProxy );
 
 
@@ -295,7 +295,7 @@ void RESQMLWriterInterface::initializeOutput()
 
 void RESQMLWriterInterface::enableCompression() const
 {
-  m_outputRepository->getDefaultHdfProxy()->setCompressionLevel(5);
+  m_outputRepository->getDefaultHdfProxy()->setCompressionLevel( 5 );
   // m_outputRepository->getDefaultHdfProxy()->setMaxChunkSize(192/2); // Create two chunks
 }
 
@@ -306,7 +306,7 @@ void RESQMLWriterInterface::generateOutput() const
   GEOS_LOG_RANK_0( GEOS_FMT( "Creating: {}", outputFilename ));
   COMMON_NS::EpcDocument pck( outputFilename );
   GEOS_LOG_RANK_0( GEOS_FMT( "Start serialization of {} in {}", pck.getName(),
-                               pck.getStorageDirectory().empty()
+                             pck.getStorageDirectory().empty()
                                  ? "working directory."
                                  : pck.getStorageDirectory()));
   pck.serializeFrom( *m_outputRepository );
@@ -343,7 +343,7 @@ void RESQMLWriterInterface::generateSubRepresentation(
   // Exchange the sizes of the data across all ranks.
   array1d< int > dataSizes( MpiWrapper::commSize());
   MpiWrapper::allGather( LvArray::integerConversion< int >( data.size()), dataSizes,
-                         MPI_COMM_GEOSX );
+                         MPI_COMM_GEOS );
 
   /// `totalDataSize` contains the total data size across all the MPI ranks.
   int const totalDataSize =
@@ -449,16 +449,14 @@ void RESQMLWriterInterface::write( real64 const time,
               WrapperBase const & wrapper = subRegion.getWrapperBase( field );
               if( first )
               {
-                types::dispatch(
-                  types::StandardArrays{}, wrapper.getTypeId(), true,
-                  [&]( auto array ) {
-                  using ArrayType = decltype(array);
+                types::dispatch( types::ListofTypeList< types::StandardArrays >{}, [&]( auto tupleOfTypes )
+                {
+                  using ArrayType = camp::first< decltype(tupleOfTypes) >;
                   using T = typename ArrayType::ValueType;
                   auto typedData = vtkAOSDataArrayTemplate< T >::New();
                   data.TakeReference( typedData );
-                  setComponentMetadata( Wrapper< ArrayType >::cast( wrapper ),
-                                        typedData );
-                } );
+                  setComponentMetadata( Wrapper< ArrayType >::cast( wrapper ), typedData );
+                }, wrapper );
                 first = false;
                 numDims = wrapper.numArrayDims();
               }
@@ -487,7 +485,7 @@ void RESQMLWriterInterface::write( real64 const time,
         MpiWrapper::broadcast( property, 0 );
 
         if( data->GetDataType() == VTK_FLOAT ||
-            data->GetDataType() == VTK_DOUBLE)
+            data->GetDataType() == VTK_DOUBLE )
         {
           RESQML2_0_1_NS::ContinuousProperty *contProp1 =
             m_outputRepository->createContinuousProperty(
@@ -503,11 +501,11 @@ void RESQMLWriterInterface::write( real64 const time,
         }
         else
         {
-          RESQML2_NS::DiscreteProperty *discProp1 = 
+          RESQML2_NS::DiscreteProperty *discProp1 =
             m_outputRepository->createDiscreteProperty(
               m_subrepresentations[field], property, field, data->GetNumberOfComponents(),
-              gsoap_eml2_3::eml23__IndexableElement::cells,              
-              gsoap_resqml2_0_1::resqml20__ResqmlPropertyKind::length);
+              gsoap_eml2_3::eml23__IndexableElement::cells,
+              gsoap_resqml2_0_1::resqml20__ResqmlPropertyKind::length );
 
           discProp1->setTimeSeries( m_timeSeries );
           discProp1->setSingleTimestamp( timestamp );
@@ -551,15 +549,15 @@ void RESQMLWriterInterface::write( real64 const time,
               maxCount );
             #endif
           }
-          else if( data->GetDataType() == VTK_LONG_LONG)
-          {                        
+          else if( data->GetDataType() == VTK_LONG_LONG )
+          {
             m_property_uuid[field]->pushBackHdf5Array1dOfValues(
               COMMON_NS::AbstractObject::numericalDatatypeEnum::INT64,
               maxCount );
           }
           else
           {
-            GEOS_LOG_RANK_0(GEOS_FMT("data type {} for property {} not handled yet", data->GetDataTypeAsString(), data->GetName()));
+            GEOS_LOG_RANK_0( GEOS_FMT( "data type {} for property {} not handled yet", data->GetDataTypeAsString(), data->GetName()));
           }
         }
         else // numDims >= 2 vectorial data
@@ -594,15 +592,15 @@ void RESQMLWriterInterface::write( real64 const time,
               data->GetNumberOfComponents(), maxCount );
             #endif
           }
-          else if( data->GetDataType() == VTK_LONG_LONG)
-          {                        
+          else if( data->GetDataType() == VTK_LONG_LONG )
+          {
             m_property_uuid[field]->pushBackHdf5Array2dOfValues(
               COMMON_NS::AbstractObject::numericalDatatypeEnum::INT64,
               data->GetNumberOfComponents(), maxCount );
           }
           else
           {
-            GEOS_LOG_RANK_0(GEOS_FMT("data type {} for property {} not handled yet", data->GetDataTypeAsString(), data->GetName()));
+            GEOS_LOG_RANK_0( GEOS_FMT( "data type {} for property {} not handled yet", data->GetDataTypeAsString(), data->GetName()));
           }
         }
 
@@ -617,10 +615,9 @@ void RESQMLWriterInterface::write( real64 const time,
               arrayView1d< integer const > const & elemGhostRank =
                 elementSubRegion.ghostRank();
               WrapperBase const & wrapper = elementSubRegion.getWrapperBase( field );
-              types::dispatch(
-                types::StandardArrays{}, wrapper.getTypeId(), true,
-                [&]( auto array ) {
-                using ArrayType = decltype(array);
+              types::dispatch( types::ListofTypeList< types::StandardArrays >{}, [&]( auto tupleOfTypes )
+              {
+                using ArrayType = camp::first< decltype(tupleOfTypes) >;
                 using T = typename ArrayType::ValueType;
                 vtkAOSDataArrayTemplate< T > *typedData =
                   vtkAOSDataArrayTemplate< T >::FastDownCast(
@@ -643,7 +640,7 @@ void RESQMLWriterInterface::write( real64 const time,
                     } );
                   }
                 } );
-              } );
+              }, wrapper );
               offset += (elementSubRegion.size() - elementSubRegion.getNumberOfGhosts());
             }
           } );
@@ -656,7 +653,7 @@ void RESQMLWriterInterface::write( real64 const time,
 
         if( data->GetNumberOfComponents() == 1 )
         {
-          
+
           if( data->GetDataType() == VTK_DOUBLE )
           {
             m_property_uuid[field]->setValuesOfDoubleHdf5Array1dOfValues(
@@ -692,8 +689,8 @@ void RESQMLWriterInterface::write( real64 const time,
               rankOffset );
             #endif
           }
-          else if( data->GetDataType() == VTK_LONG_LONG)
-          {                        
+          else if( data->GetDataType() == VTK_LONG_LONG )
+          {
             m_property_uuid[field]->setValuesOfInt64Hdf5Array1dOfValues(
               static_cast< int64_t * >(data->GetVoidPointer( 0 )),
               data->GetNumberOfTuples(),
@@ -747,8 +744,8 @@ void RESQMLWriterInterface::write( real64 const time,
               rankOffset );
             #endif
           }
-          else if( data->GetDataType() == VTK_LONG_LONG)
-          {                        
+          else if( data->GetDataType() == VTK_LONG_LONG )
+          {
             m_property_uuid[field]->setValuesOfInt64Hdf5Array2dOfValues(
               static_cast< int64_t * >(data->GetVoidPointer( 0 )),
               data->GetNumberOfComponents(),
