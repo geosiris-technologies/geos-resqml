@@ -23,21 +23,21 @@ EnergyMLDataObjectRepository::EnergyMLDataObjectRepository( string const & name,
   enableLogLevelInput();
 }
 
-Group * EnergyMLDataObjectRepository::createChild( string const & childKey, string const & childName )
-{
-  // RESQML DataObject Repositories generally don't have child XML nodes, must override this method to enable
-  GEOS_THROW( GEOS_FMT( "EnergyMLDataObjectRepository '{}': invalid child XML node '{}' of type {}", getName(), childName, childKey ),
-              InputError );
-  std::unique_ptr< EnergyMLDataObjectRepository > task = EnergyMLDataObjectRepository::CatalogInterface::factory( childKey, childName, this );
-  return &this->getParent().registerGroup< EnergyMLDataObjectRepository >( childName, std::move( task ) );
+// Group * EnergyMLDataObjectRepository::createChild( string const & childKey, string const & childName )
+// {
+//   // RESQML DataObject Repositories generally don't have child XML nodes, must override this method to enable
+//   // GEOS_THROW( GEOS_FMT( "EnergyMLDataObjectRepository '{}': invalid child XML node '{}' of type {}", getName(), childName, childKey ),
+//   //             InputError );
+//   std::unique_ptr< EnergyMLDataObjectRepository > task = EnergyMLDataObjectRepository::CatalogInterface::factory( childKey, childName, this );
+//   return &this->getParent().registerGroup< EnergyMLDataObjectRepository >( childName, std::move( task ) );
 
-}
+// }
 
-EnergyMLDataObjectRepository::CatalogInterface::CatalogType & EnergyMLDataObjectRepository::getCatalog()
-{
-  static EnergyMLDataObjectRepository::CatalogInterface::CatalogType catalog;
-  return catalog;
-}
+// EnergyMLDataObjectRepository::CatalogInterface::CatalogType & EnergyMLDataObjectRepository::getCatalog()
+// {
+//   static EnergyMLDataObjectRepository::CatalogInterface::CatalogType catalog;
+//   return catalog;
+// }
 
 common::DataObjectRepository * EnergyMLDataObjectRepository::getData()
 {

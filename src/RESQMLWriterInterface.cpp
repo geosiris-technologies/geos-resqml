@@ -33,13 +33,15 @@
 #include "fesapi/eml2_0/HdfProxyMPI.h"
 #include "fesapi/eml2/TimeSeries.h"
 #include "fesapi/resqml2_0_1/PropertyKind.h"
-#include "fesapi/tools/TimeTools.h"
+// #include "fesapi/tools/TimeTools.h"
 #include "fesapi/resqml2_0_1/ContinuousProperty.h"
 #include "fesapi/resqml2_0_1/DiscreteProperty.h"
 
 // System includes
 #include <random>
 #include <sstream>
+
+#include "hdf5.h"
 
 namespace geos
 {
@@ -254,7 +256,9 @@ RESQMLWriterInterface::RESQMLWriterInterface( string name )
   : VTKPolyDataWriterInterface( name ),
   m_outputRepository( new COMMON_NS::DataObjectRepository()),
   m_propertyKind( nullptr )
-{ }
+{ 
+  // H5Eset_auto2(H5E_DEFAULT, nullptr, nullptr);
+}
 
 void RESQMLWriterInterface::initializeOutput()
 {
@@ -264,8 +268,9 @@ void RESQMLWriterInterface::initializeOutput()
 
   m_propertyKind = m_outputRepository->createPropertyKind(
     propertyKind, "propType1", "F2I",
-    gsoap_resqml2_0_1::resqml20__ResqmlUom::m,
-    gsoap_resqml2_0_1::resqml20__ResqmlPropertyKind::length );
+    gsoap_resqml2_0_1::resqml20__ResqmlUom::m, 
+    false,
+    gsoap_resqml2_0_1::resqml20__ResqmlPropertyKind::length);
 
   string timeSeries = uuid::generate_uuid_v4();
   MpiWrapper::broadcast( timeSeries, 0 );
@@ -281,8 +286,8 @@ void RESQMLWriterInterface::initializeOutput()
   EML2_NS::AbstractHdfProxy *m_hdfProxy = m_outputRepository->createHdfProxy(
     hdfProxy, "Parallel Hdf Proxy", m_outputDir, m_outputName + ".h5",
     COMMON_NS::DataObjectRepository::openingMode::OVERWRITE );
-  m_hdfProxy->setCompressionLevel( 5 );
-  dynamic_cast< EML2_0_NS::HdfProxyMPI * >(m_hdfProxy)->setCollectiveIO();
+  // m_hdfProxy->setCompressionLevel( 5 );
+  // dynamic_cast< EML2_0_NS::HdfProxyMPI * >(m_hdfProxy)->setCollectiveIO();
   m_outputRepository->setDefaultHdfProxy( m_hdfProxy );
 
 
@@ -315,8 +320,7 @@ void RESQMLWriterInterface::generateOutput() const
 void RESQMLWriterInterface::generateSubRepresentation(
   ElementRegionManager const & elemManager, string const & field )
 {
-
-  std::vector< globalIndex > data;
+  std::vector< uint64_t > data;
 
   elemManager.forElementRegions< CellElementRegion >(
     [&]( CellElementRegion const & region ) {
@@ -360,8 +364,9 @@ void RESQMLWriterInterface::generateSubRepresentation(
 
   // Alternate way
   subrep_allranks->pushBackSubRepresentationPatch( gsoap_eml2_3::eml23__IndexableElement::cells, totalDataSize );
-  int const rankOffset =
+  int const rankOffset =    
     std::accumulate( dataSizes.begin(), std::next( dataSizes.begin(), MpiWrapper::commRank()), 0 );
+  
   subrep_allranks->setElementIndices( reinterpret_cast< uint64_t * >(data.data()), data.size(), rankOffset );
 
   //record the object pointer for each field
@@ -478,7 +483,7 @@ void RESQMLWriterInterface::write( real64 const time,
 
         data->SetNumberOfTuples( numElements );
         data->SetName( field.c_str());
-
+       
 
         //RESQML Property same for all ranks
         string property = uuid::generate_uuid_v4();
@@ -515,7 +520,6 @@ void RESQMLWriterInterface::write( real64 const time,
 
         globalIndex maxCount =
           m_subrepresentations[field]->getElementCountOfPatch( 0 );
-
 
         if( data->GetNumberOfComponents() == 1 ) // scalar data
         {

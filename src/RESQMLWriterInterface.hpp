@@ -90,6 +90,8 @@ public:
    */
   void setParentRepresentation( const std::tuple< string, string > & parent )
   {
+    GEOS_LOG_RANK_0( GEOS_FMT( "UUID {}", std::get< 0 >( parent )) );
+    GEOS_LOG_RANK_0( GEOS_FMT( "Title {}", std::get< 1 >( parent )) );
     m_parent = m_outputRepository->createPartial< RESQML2_0_1_NS::UnstructuredGridRepresentation >( std::get< 0 >( parent ), std::get< 1 >( parent ));
   }
 

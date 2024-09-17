@@ -20,6 +20,13 @@ public:
   ETPRepository( const string & name,
                  Group * const parent );
 
+  /**
+   * @brief Return the name of the ETPRepository in object catalog.
+   * @return string that contains the catalog name of the ETPRepository
+   */
+  static string catalogName() { return "ETPRepository"; }
+
+  void open() override;
 
 protected:
 

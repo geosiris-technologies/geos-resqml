@@ -29,7 +29,7 @@
 #include <vtkIntArray.h>
 
 
-#include "fesapi/resqml2/AbstractLocal3dCrs.h"
+#include "fesapi/eml2/AbstractLocal3dCrs.h"
 #include "fesapi/resqml2/CategoricalProperty.h"
 #include "fesapi/resqml2/ContinuousProperty.h"
 #include "fesapi/resqml2/DiscreteProperty.h"

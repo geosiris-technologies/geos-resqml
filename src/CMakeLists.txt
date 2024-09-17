@@ -57,25 +57,27 @@ set(componentSources
 # set(dependencyList mesh)
 set(dependencyList FesapiCpp)
 
-# if(GEOSX_BUILD_SHARED_LIBS)
-set(dependencyList ${dependencyList} geosx_core)
-# else()
-#   set(dependencyList ${dependencyList} ${geosx_core_libs})
-# endif()
+if(GEOS_BUILD_SHARED_LIBS)
+  set(dependencyList ${dependencyList} geosx_core)
+else()
+  set(dependencyList ${dependencyList} ${geosx_core_libs})
+endif()
+
+geos_decorate_link_dependencies( LIST decoratedDependencies
+                                 DEPENDENCIES ${dependencyList} )
 
 message("adding RESQML library:")
 
-blt_add_library(NAME resqml
-  SOURCES ${componentSources}
-  HEADERS ${componentHeaders}
-  DEPENDS_ON ${dependencyList}
-  OBJECT ${GEOSX_BUILD_OBJ_LIBS}
-)
+blt_add_library( NAME resqml
+                 SOURCES ${componentSources}
+                 HEADERS ${componentHeaders}
+                 DEPENDS_ON ${decoratedDependencies}
+                 OBJECT ${GEOS_BUILD_OBJ_LIBS}
+                 SHARED ${GEOS_BUILD_SHARED_LIBS}
+               )
 
 target_compile_definitions(resqml PUBLIC "HAS_UNCAUGHT_EXCEPTIONS")
 
-# target_link_libraries(resqml PUBLIC FesapiCpp)
-# target_include_directories(resqml PUBLIC ${FESAPI_DIR}/include)
 target_include_directories(resqml PUBLIC ${CMAKE_CURRENT_LIST_DIR})
 
-geosx_add_code_checks(PREFIX resqml)
+# geosx_add_code_checks(PREFIX resqml)

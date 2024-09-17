@@ -27,8 +27,6 @@ public:
    */
   static string catalogName() { return "EpcDocumentRepository"; }
 
-  string getCatalogName() override { return catalogName(); }
-
   void open() override;
 
 protected:

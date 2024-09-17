@@ -47,4 +47,10 @@ void ETPRepository::postInputInitialization()
   // while (!storeHandlers->isDone()) {}
 }
 
+void ETPRepository::open()
+{}
+
+REGISTER_CATALOG_ENTRY( ExternalDataRepositoryBase, ETPRepository, string const &,
+                        Group * const )
+
 } // end namespace geosx

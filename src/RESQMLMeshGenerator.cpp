@@ -20,6 +20,7 @@
 #include "common/DataLayouts.hpp"
 #include "common/MpiWrapper.hpp"
 #include "common/TypeDispatch.hpp"
+#include "mesh/ExternalDataRepositoryManager.hpp"
 #include "mesh/MeshBody.hpp"
 #include "mesh/MeshManager.hpp"
 #include "mesh/generators/CellBlockManager.hpp"
@@ -56,6 +57,9 @@ RESQMLMeshGenerator::RESQMLMeshGenerator( string const & name,
   : ExternalMeshGeneratorBase( name, parent ),
   m_repository( nullptr )
 {
+  getWrapperBase( ExternalMeshGeneratorBase::viewKeyStruct::filePathString()).
+    setInputFlag( InputFlags::OPTIONAL );
+
   registerWrapper( viewKeyStruct::repositoryString(), &m_objectName ).
     setInputFlag( InputFlags::REQUIRED ).
     setDescription( "Name of the EnergyML Repository" );
@@ -132,14 +136,27 @@ Group * RESQMLMeshGenerator::createChild( string const & childKey, string const 
 
 void RESQMLMeshGenerator::postInputInitialization()
 {
-  MeshManager & meshManager = this->getGroupByPath< MeshManager >( "/Problem/Mesh" );
-  // objectRepository.
-  m_repository = meshManager.getGroupPointer< EnergyMLDataObjectRepository >( m_objectName );
+  ExternalDataRepositoryManager & externalDataManager = this->getGroupByPath< ExternalDataRepositoryManager >( "/Problem/ExternalDataRepository" );
+    // objectRepository.
+  m_repository = externalDataManager.getGroupPointer< EnergyMLDataObjectRepository >( m_objectName );
 
   GEOS_THROW_IF( m_repository == nullptr,
                  getName() << ": EnergyML Data Object Repository not found: " << m_objectName,
                  InputError );
 
+  COMMON_NS::AbstractObject * rep{nullptr};
+
+  if( !m_uuid.empty())
+    rep = m_repository->getDataObject( m_uuid );
+  else if( !m_title.empty())
+    rep = m_repository->getDataObjectByTitle( m_title );
+
+  if( rep == nullptr )
+    GEOS_ERROR( GEOS_FMT( "There exists no such data object with uuid {} or title {} in the epc file", m_uuid, m_title ) );
+
+
+  m_title = rep->getTitle();
+  m_uuid = rep->getUuid();
 }
 
 void RESQMLMeshGenerator::fillCellBlockManager( CellBlockManager & cellBlockManager, SpatialPartition & partition )
@@ -400,6 +417,8 @@ RESQMLMeshGenerator::retrieveUnstructuredGrid()
 
   GEOS_LOG_RANK_0( GEOS_FMT( "GetNumberOfCells  {}", loadedMesh->GetNumberOfCells()) );
   GEOS_LOG_RANK_0( GEOS_FMT( "GetNumberOfPoints {}", loadedMesh->GetNumberOfPoints()) );
+  GEOS_LOG_RANK_0( GEOS_FMT( "UUID {}", m_uuid) );
+  GEOS_LOG_RANK_0( GEOS_FMT( "Title {}", m_title) );
 
   return loadedMesh;
 }

@@ -27,36 +27,8 @@ public:
   explicit EnergyMLDataObjectRepository( string const & name,
                                          Group * const parent );
 
-  /**
-   * @brief Return the name of the MeshGenerator in object catalog.
-   * @return string that contains the catalog name of the MeshGenerator
-   */
-  static string catalogName() { return "EnergyMLDataObjectRepository"; }
-
-  /// using alias for templated Catalog meshGenerator type
-  using CatalogInterface = dataRepository::CatalogInterface< EnergyMLDataObjectRepository, string const &, Group * const >;
-
-  /**
-   * @brief Accessor for the singleton Catalog object
-   * @return a static reference to the Catalog object
-   */
-  static CatalogInterface::CatalogType & getCatalog();
-
-  /**
-   * @brief function to return the catalog name of the derived class
-   * @return a string that contains the catalog name of the derived class
-   */
-  virtual string getCatalogName() = 0;
-  // /**
-  //  * @brief Create a new object as a child of this group.
-  //  * @param childKey the catalog key of the new object to create
-  //  * @param childName the name of the new object in the repository
-  //  * @return the group child
-  //  */
-  virtual Group * createChild( string const & childKey, string const & childName ) override;
 
   common::DataObjectRepository * getData();
-
 
   COMMON_NS::AbstractObject * getDataObject( string const & id );
   COMMON_NS::AbstractObject * getDataObjectByTitle( string const & name );
